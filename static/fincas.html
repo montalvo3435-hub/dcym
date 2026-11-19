@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gestión de fincas — DCYM</title>
+<meta name="theme-color" content="#050a07">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/dcym.css?v=5">
+<style>
+  /* Módulo 1 — Gestión de fincas (CRUD). Mismos componentes del sistema DCYM. */
+  /* .btn fija display y anulaba el atributo hidden del botón Cancelar. */
+  [hidden]{display:none!important}
+  .fz-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:1rem;margin:2rem 0 1.25rem}
+  .fz-head h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(2.2rem,5vw,3.2rem);letter-spacing:.02em;line-height:1;margin:.4rem 0 0}
+  .fz-head p{opacity:.75;margin:.35rem 0 0;max-width:60ch}
+  .fz-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.75rem;margin-bottom:1.25rem}
+  .fz-stat{padding:1rem 1.2rem}
+  .fz-stat b{display:block;font-family:'Space Mono',monospace;font-size:1.7rem;color:#00ff88}
+  .fz-stat span{font-size:.85rem;letter-spacing:.12em;text-transform:uppercase;opacity:.7}
+  .fz-grid{display:grid;grid-template-columns:minmax(0,360px) minmax(0,1fr);gap:1.25rem;align-items:start}
+  .fz-form{padding:1.4rem}
+  .fz-form h2,.fz-list h2{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:.04em;margin:0 0 1rem}
+  .fz-field{margin-bottom:.9rem}
+  .fz-field label{display:block;font-weight:600;font-size:.95rem;margin-bottom:.3rem}
+  .fz-field input,.fz-field select{width:100%;padding:.75rem .85rem;border-radius:10px;border:1px solid rgba(0,255,136,.25);background:rgba(0,0,0,.35);color:inherit;font:inherit;font-size:1rem;min-height:48px}
+  .fz-field input:focus,.fz-field select:focus{outline:2px solid #00ff88;outline-offset:1px}
+  .fz-field input[aria-invalid=true],.fz-field select[aria-invalid=true]{border-color:#ff6b3d}
+  .fz-err{color:#ff8a5c;font-size:.88rem;margin-top:.25rem;min-height:1em}
+  .fz-actions{display:flex;gap:.6rem;flex-wrap:wrap;margin-top:1rem}
+  .fz-list{padding:1.4rem;overflow:hidden}
+  .fz-search{display:flex;gap:.6rem;margin-bottom:1rem}
+  .fz-search input{flex:1;padding:.7rem .85rem;border-radius:10px;border:1px solid rgba(0,255,136,.25);background:rgba(0,0,0,.35);color:inherit;font:inherit;min-height:46px}
+  .fz-table{width:100%;border-collapse:collapse;font-size:.98rem}
+  .fz-table th{text-align:left;font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;opacity:.65;padding:.55rem .5rem;border-bottom:1px solid rgba(0,255,136,.2)}
+  .fz-table td{padding:.7rem .5rem;border-bottom:1px solid rgba(255,255,255,.06);vertical-align:middle}
+  .fz-table td.num{font-family:'Space Mono',monospace}
+  .fz-table .fz-row-actions{display:flex;gap:.4rem;justify-content:flex-end}
+  .fz-empty{text-align:center;padding:2.5rem 1rem;opacity:.8}
+  .fz-msg{margin:0 0 1rem;padding:.75rem 1rem;border-radius:10px;display:none}
+  .fz-msg.ok{display:block;background:rgba(0,255,136,.12);border:1px solid rgba(0,255,136,.35)}
+  .fz-msg.err{display:block;background:rgba(255,107,61,.12);border:1px solid rgba(255,107,61,.4)}
+  .fz-back{display:inline-flex;align-items:center;gap:.4rem;opacity:.8;font-size:.95rem}
+  @media (max-width: 860px){
+    .fz-grid{grid-template-columns:1fr}
+    .fz-table thead{display:none}
+    .fz-table tr{display:block;padding:.6rem 0;border-bottom:1px solid rgba(255,255,255,.08)}
+    .fz-table td{display:flex;justify-content:space-between;border:0;padding:.3rem 0}
+    .fz-table td::before{content:attr(data-l);opacity:.6;font-size:.8rem;letter-spacing:.1em;text-transform:uppercase}
+    .fz-table .fz-row-actions{justify-content:flex-start}
+    .fz-stats{grid-template-columns:1fr 1fr 1fr}
+    .fz-stat b{font-size:1.25rem}
+  }
+</style>
+</head>
+<body>
+<header class="appbar">
+  <div class="wrap">
+    <a href="/" class="brand"><span class="brand-mark" data-brand-icon></span><span class="brand-name">DCYM<small>CENTRO DE CONTROL</small></span></a>
+    <div class="appbar-right">
+      <div class="user-chip"><span class="avatar">EQ</span><span>Equipo DCYM</span></div>
+      <button class="btn btn-ghost btn-sm" onclick="DCYM.logout()">Salir</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="fz-head">
+    <div>
+      <a class="fz-back" href="/app">← Centro de control</a>
+      <h1>Gestión de fincas</h1>
+      <p>Registra las fincas que monitorea DCYM: ubicación, extensión y reses declaradas.</p>
+    </div>
+  </div>
+
+  <div class="fz-stats">
+    <div class="card fz-stat"><b id="tFincas">0</b><span>Fincas</span></div>
+    <div class="card fz-stat"><b id="tReses">0</b><span>Reses declaradas</span></div>
+    <div class="card fz-stat"><b id="tHa">0</b><span>Hectáreas</span></div>
+  </div>
+
+  <div id="msg" class="fz-msg" role="status" aria-live="polite"></div>
+
+  <div class="fz-grid">
+    <form class="card fz-form" id="form" novalidate>
+      <h2 id="formTitle">Nueva finca</h2>
+      <input type="hidden" id="fid">
+      <div class="fz-field"><label for="nombre">Nombre de la finca *</label>
+        <input id="nombre" name="nombre" maxlength="80" placeholder="Ej.: Hacienda La Esperanza" required>
+        <div class="fz-err" data-err="nombre"></div></div>
+      <div class="fz-field"><label for="municipio">Municipio *</label>
+        <select id="municipio" name="municipio" required>
+          <option value="">Selecciona un municipio</option>
+          <option>Montería</option><option>Cereté</option><option>Lorica</option><option>Sahagún</option>
+          <option>Planeta Rica</option><option>Montelíbano</option><option>Puerto Libertador</option>
+          <option>Tierralta</option><option>Valencia</option><option>Ciénaga de Oro</option><option>Otro</option>
+        </select><div class="fz-err" data-err="municipio"></div></div>
+      <div class="fz-field"><label for="hectareas">Extensión (hectáreas) *</label>
+        <input id="hectareas" name="hectareas" type="number" min="0.1" step="0.1" inputmode="decimal" placeholder="Ej.: 300" required>
+        <div class="fz-err" data-err="hectareas"></div></div>
+      <div class="fz-field"><label for="reses">Reses declaradas *</label>
+        <input id="reses" name="reses" type="number" min="0" step="1" inputmode="numeric" placeholder="Ej.: 250" required>
+        <div class="fz-err" data-err="reses"></div></div>
+      <div class="fz-field"><label for="propietario">Propietario</label>
+        <input id="propietario" name="propietario" maxlength="80" placeholder="Opcional"></div>
+      <div class="fz-actions">
+        <button type="submit" class="btn btn-primary" id="btnSave">Guardar finca</button>
+        <button type="button" class="btn btn-ghost" id="btnCancel" hidden>Cancelar edición</button>
+      </div>
+    </form>
+
+    <section class="card fz-list" aria-labelledby="tl">
+      <h2 id="tl">Fincas registradas</h2>
+      <div class="fz-search">
+        <label for="q" class="sr-only" style="position:absolute;left:-9999px">Buscar</label>
+        <input id="q" type="search" placeholder="Buscar por nombre o municipio…">
+      </div>
+      <div id="list"><div class="fz-empty">Cargando fincas…</div></div>
+    </section>
+  </div>
+</main>
+
+<script src="/static/js/common.js"></script>
+<script>
+(function(){
+  const $ = s => document.querySelector(s);
+  const fmt = n => Number(n).toLocaleString('es-CO');
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  function aviso(t, tipo){ const m=$('#msg'); m.className='fz-msg '+tipo; m.textContent=t; clearTimeout(aviso.t); aviso.t=setTimeout(()=>m.className='fz-msg',4000); }
+  function limpiarErrores(){ document.querySelectorAll('[data-err]').forEach(e=>e.textContent=''); document.querySelectorAll('[aria-invalid]').forEach(e=>e.removeAttribute('aria-invalid')); }
+  function mostrarErrores(err){ for(const [k,v] of Object.entries(err)){ const e=document.querySelector(`[data-err="${k}"]`); if(e) e.textContent=v; const i=document.getElementById(k); if(i) i.setAttribute('aria-invalid','true'); } }
+
+  // Validación en el navegador (la del servidor sigue siendo la definitiva).
+  function validar(d){
+    const e={};
+    if(d.nombre.trim().length<3) e.nombre='El nombre debe tener al menos 3 caracteres.';
+    if(!d.municipio) e.municipio='Selecciona un municipio de la lista.';
+    if(!(Number(d.hectareas)>0)) e.hectareas='Las hectáreas deben ser un número mayor que 0.';
+    if(d.reses==='' || !Number.isInteger(Number(d.reses)) || Number(d.reses)<0) e.reses='La cantidad de reses debe ser un número entero, 0 o más.';
+    return e;
+  }
+
+  async function cargar(){
+    const q = encodeURIComponent($('#q').value.trim());
+    try{
+      const r = await fetch('/api/fincas?q='+q, {credentials:'same-origin'});
+      if(r.status===401){ location.href='/?login=1'; return; }
+      const j = await r.json();
+      $('#tFincas').textContent=fmt(j.totales.fincas); $('#tReses').textContent=fmt(j.totales.reses); $('#tHa').textContent=fmt(j.totales.hectareas);
+      if(!j.fincas.length){
+        $('#list').innerHTML = q ? '<div class="fz-empty">No hay fincas que coincidan con la búsqueda.</div>'
+                                 : '<div class="fz-empty">Todavía no hay fincas registradas.<br>Usa el formulario para crear la primera.</div>';
+        return;
+      }
+      $('#list').innerHTML = '<table class="fz-table"><thead><tr><th>Finca</th><th>Municipio</th><th>Ha</th><th>Reses</th><th></th></tr></thead><tbody>'+
+        j.fincas.map(f=>`<tr>
+          <td data-l="Finca"><strong>${esc(f.nombre)}</strong>${f.propietario?`<br><small style="opacity:.65">${esc(f.propietario)}</small>`:''}</td>
+          <td data-l="Municipio">${esc(f.municipio)}</td>
+          <td data-l="Hectáreas" class="num">${fmt(f.hectareas)}</td>
+          <td data-l="Reses" class="num">${fmt(f.reses)}</td>
+          <td><div class="fz-row-actions">
+            <button class="btn btn-ghost btn-sm" data-edit="${f.id}">Editar</button>
+            <button class="btn btn-danger btn-sm" data-del="${f.id}" data-name="${esc(f.nombre)}">Eliminar</button>
+          </div></td></tr>`).join('')+'</tbody></table>';
+    }catch(e){ $('#list').innerHTML='<div class="fz-empty">No se pudo cargar la información. Revisa tu conexión e inténtalo de nuevo.</div>'; }
+  }
+
+  function resetForm(){ $('#form').reset(); $('#fid').value=''; $('#formTitle').textContent='Nueva finca'; $('#btnSave').textContent='Guardar finca'; $('#btnCancel').hidden=true; limpiarErrores(); }
+
+  $('#form').addEventListener('submit', async ev=>{
+    ev.preventDefault(); limpiarErrores();
+    const d = {nombre:$('#nombre').value, municipio:$('#municipio').value, hectareas:$('#hectareas').value, reses:$('#reses').value, propietario:$('#propietario').value};
+    const e = validar(d); if(Object.keys(e).length){ mostrarErrores(e); return; }
+    const id = $('#fid').value, btn=$('#btnSave'); btn.disabled=true; btn.textContent='Guardando…';
+    try{
+      const r = await fetch(id?'/api/fincas/'+id:'/api/fincas', {method:id?'PUT':'POST', credentials:'same-origin', headers:{'Content-Type':'application/json'}, body:JSON.stringify(d)});
+      const j = await r.json();
+      if(!r.ok){ if(j.errores) mostrarErrores(j.errores); else aviso(j.error||'No se pudo guardar.','err'); return; }
+      aviso(id?'Finca actualizada correctamente.':'Finca registrada correctamente.','ok'); resetForm(); cargar();
+    }catch(e){ aviso('No se pudo guardar. Revisa tu conexión.','err'); }
+    finally{ btn.disabled=false; if(!$('#fid').value) btn.textContent='Guardar finca'; }
+  });
+  $('#btnCancel').addEventListener('click', resetForm);
+
+  $('#list').addEventListener('click', async ev=>{
+    const ed = ev.target.closest('[data-edit]'), de = ev.target.closest('[data-del]');
+    if(ed){
+      const r = await fetch('/api/fincas/'+ed.dataset.edit,{credentials:'same-origin'}); const j = await r.json(); if(!j.ok) return aviso(j.error,'err');
+      const f=j.finca; $('#fid').value=f.id; $('#nombre').value=f.nombre; $('#municipio').value=f.municipio; $('#hectareas').value=f.hectareas; $('#reses').value=f.reses; $('#propietario').value=f.propietario||'';
+      $('#formTitle').textContent='Editar finca'; $('#btnSave').textContent='Guardar cambios'; $('#btnCancel').hidden=false; $('#nombre').focus(); window.scrollTo({top:0,behavior:'smooth'});
+    }
+    if(de){
+      if(!confirm('¿Eliminar la finca «'+de.dataset.name+'»? Esta acción no se puede deshacer.')) return;
+      const r = await fetch('/api/fincas/'+de.dataset.del,{method:'DELETE',credentials:'same-origin'}); const j = await r.json();
+      if(j.ok){ aviso('Finca eliminada.','ok'); if($('#fid').value===de.dataset.del) resetForm(); cargar(); } else aviso(j.error||'No se pudo eliminar.','err');
+    }
+  });
+  let t; $('#q').addEventListener('input',()=>{ clearTimeout(t); t=setTimeout(cargar,250); });
+  cargar();
+})();
+</script>
+</body>
+</html>

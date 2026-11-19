@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Modo dron — DCYM</title>
+<meta name="theme-color" content="#000000">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/dcym.css?v=5">
+<style>
+  html, body { height: 100%; overflow: hidden; background: #000; }
+  body { overscroll-behavior: none; }
+
+  /* ---------- preparación ---------- */
+  .setup { min-height: 100%; display: flex; flex-direction: column; background: var(--bg); overflow-y: auto; }
+  .setup main { flex: 1; display: grid; place-items: center; padding: 32px 16px; }
+  .setup-card { width: min(440px, 100%); padding: 28px; }
+  .setup-card h1 { font-family: var(--font-display); font-weight: 400; font-size: 46px; line-height: .95; margin: 14px 0 8px; }
+  .setup-card p { color: var(--muted); margin: 0 0 22px; }
+  .setup-card .btn { width: 100%; height: 52px; font-size: 17px; }
+  .checks { list-style: none; padding: 0; margin: 18px 0 0; display: grid; gap: 8px; font-size: 14.5px; color: var(--muted); }
+  .checks li { display: flex; gap: 10px; align-items: flex-start; }
+  .checks svg { width: 16px; height: 16px; color: var(--green); flex: none; margin-top: 3px; }
+  .setup-error { display: none; margin-top: 16px; padding: 12px 14px; border-radius: 10px; background: rgba(255,77,94,.1); border: 1px solid rgba(255,77,94,.4); color: #ffb3bb; font-size: 14.5px; }
+  .setup-error.show { display: block; }
+
+  /* ---------- vuelo ---------- */
+  .flight { position: fixed; inset: 0; display: none; background: #000; }
+  .flight.on { display: block; }
+  .flight video, .flight canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .flight video { object-fit: cover; }
+  .hud-top, .hud-bottom { position: absolute; left: 0; right: 0; z-index: 3; padding: 12px 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .hud-top { top: 0; padding-top: max(12px, env(safe-area-inset-top)); background: linear-gradient(180deg, rgba(0,0,0,.65), transparent); }
+  .hud-bottom { bottom: 0; padding-bottom: max(16px, env(safe-area-inset-bottom)); background: linear-gradient(0deg, rgba(0,0,0,.75), transparent); align-items: flex-end; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 12px; border-radius: 999px;
+    background: rgba(5,10,7,.62); border: 1px solid rgba(255,255,255,.12); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    font-family: var(--font-mono); font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color: #fff;
+  }
+  .pill.name { font-family: var(--font-body); font-size: 15px; font-weight: 700; letter-spacing: .3px; text-transform: none; }
+  .count-box { background: rgba(5,10,7,.7); border: 1px solid rgba(0,230,126,.35); border-radius: 14px; padding: 10px 16px; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+  .count-box b { display: block; font-family: var(--font-display); font-weight: 400; font-size: 56px; line-height: .9; color: var(--green); }
+  .count-box small { font-weight: 700; font-size: 14px; color: #d8efe2; }
+  .hud-actions { display: flex; gap: 10px; }
+  .round { width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; background: rgba(5,10,7,.62); border: 1px solid rgba(255,255,255,.18); color: #fff; cursor: pointer; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+  .round svg { width: 22px; height: 22px; }
+  .land { height: 52px; border-radius: 26px; padding: 0 20px; background: var(--red); color: #fff; border: 0; font-weight: 700; font-size: 16px; cursor: pointer; }
+
+  /* retícula central */
+  .reticle { position: absolute; left: 50%; top: 50%; width: 64px; height: 64px; transform: translate(-50%, -50%); z-index: 2; pointer-events: none; opacity: .55; }
+  .reticle::before, .reticle::after { content: ""; position: absolute; background: #fff; }
+  .reticle::before { left: 50%; top: 0; bottom: 0; width: 1px; }
+  .reticle::after { top: 50%; left: 0; right: 0; height: 1px; }
+  .banner { position: absolute; left: 50%; top: 70px; transform: translateX(-50%); z-index: 4; display: none; padding: 10px 14px; border-radius: 10px; background: rgba(255,77,94,.9); color: #fff; font-weight: 700; font-size: 14px; max-width: calc(100% - 32px); text-align: center; }
+  .banner.show { display: block; }
+</style>
+</head>
+<body>
+
+<div class="setup" id="setup">
+  <header class="appbar">
+    <div class="wrap">
+      <a href="/app" class="brand"><span class="brand-mark" data-brand-icon></span><span class="brand-name">DCYM<small>MODO DRON</small></span></a>
+      <a href="/app" class="btn btn-ghost btn-sm">Volver</a>
+    </div>
+  </header>
+  <main>
+    <div class="card setup-card">
+      <span class="tag"><span class="dot off" id="readyDot"></span>Preparando despegue</span>
+      <h1>Convierte este teléfono en un dron</h1>
+      <p>Tu cámara transmitirá al centro de monitoreo y la IA marcará cada vaca que aparezca.</p>
+      <div class="field">
+        <label for="droneName">Nombre del dron</label>
+        <input class="input" id="droneName" maxlength="32" autocomplete="off">
+      </div>
+      <button class="btn btn-primary" id="takeoff">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+        Despegar
+      </button>
+      <div class="setup-error" id="setupError" role="alert"></div>
+      <ul class="checks">
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Permite el acceso a la cámara cuando el navegador lo pida.</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Apunta a ganado real o a una foto de vacas en otra pantalla.</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Mantén la pantalla encendida mientras transmites.</li>
+      </ul>
+    </div>
+  </main>
+</div>
+
+<div class="flight" id="flight">
+  <video id="video" autoplay muted playsinline></video>
+  <canvas id="overlay"></canvas>
+  <div class="reticle"></div>
+  <div class="banner" id="banner"></div>
+  <div class="hud-top">
+    <span class="pill name" id="hudName">Dron</span>
+    <span class="pill"><span class="dot warn" id="hudDot"></span><span id="hudStatus">Conectando</span></span>
+  </div>
+  <div class="hud-bottom">
+    <div class="count-box"><b id="hudCount">0</b><small id="hudLabel">vacas a la vista</small></div>
+    <div class="hud-actions">
+      <button class="round" id="flip" aria-label="Cambiar cámara"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15.5-6.2L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15.5 6.2L3 16"/><path d="M3 21v-5h5"/></svg></button>
+      <button class="land" id="land">Aterrizar</button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/common.js?v=5"></script>
+<script>
+  const SEND_W = 512;          // ancho del frame que se manda a la IA
+  const MIN_INTERVAL = 350;    // ms mínimos entre frames (≈ 2-3 por segundo)
+  const BOX_TTL = 1500;        // si no llega resultado nuevo, las cajas se borran
+
+  const $ = id => document.getElementById(id);
+  const video = $("video"), overlay = $("overlay"), octx = overlay.getContext("2d");
+  const grab = document.createElement("canvas"), gctx = grab.getContext("2d");
+
+  let stream = null, ws = null, flying = false, facing = "environment";
+  let waiting = false, lastSent = 0, lastResult = null, wakeLock = null, sentAt = 0;
+
+  // Id estable de este teléfono (por pestaña): al reconectarse conserva su cámara en el panel.
+  let cid = sessionStorage.getItem("dcym_cid");
+  if (!cid) {
+    cid = (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2) + Date.now());
+    sessionStorage.setItem("dcym_cid", cid);
+  }
+
+  const nameInput = $("droneName");
+  nameInput.value = localStorage.getItem("dcym_drone_name") || `Dron ${Math.floor(10 + Math.random() * 89)}`;
+
+  if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+    showSetupError("Este navegador no permite usar la cámara aquí. Abre la página con https:// en Chrome o Safari.");
+  }
+
+  function showSetupError(msg) { const e = $("setupError"); e.textContent = msg; e.classList.add("show"); }
+  function status(text, kind) { $("hudStatus").textContent = text; $("hudDot").className = "dot" + (kind ? " " + kind : ""); }
+  function banner(text) { const b = $("banner"); b.textContent = text || ""; b.classList.toggle("show", !!text); }
+
+  async function startCamera() {
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: { facingMode: { ideal: facing }, width: { ideal: 1280 }, height: { ideal: 720 } },
+    });
+    video.srcObject = stream;
+    await video.play();
+  }
+
+  function connect() {
+    const name = encodeURIComponent(nameInput.value.trim() || "Dron");
+    ws = new WebSocket(DCYM.wsUrl(`/ws/dron?name=${name}&cid=${encodeURIComponent(cid)}`));
+    status("Conectando", "warn");
+    ws.onopen = () => { waiting = false; };
+    ws.onmessage = ev => {
+      const m = JSON.parse(ev.data);
+      if (m.type === "hello") { $("hudName").textContent = m.name; status("En vivo"); }
+      else if (m.type === "result") {
+        waiting = false; banner("");
+        lastResult = { preds: m.predictions, w: m.w, h: m.h, at: performance.now() };
+        const n = m.predictions.length;
+        $("hudCount").textContent = n;
+        $("hudLabel").textContent = n === 1 ? "vaca a la vista" : "vacas a la vista";
+        status(`En vivo · ${m.latency} ms`);
+      } else if (m.type === "error") {
+        waiting = false;
+        banner(m.error);
+      }
+    };
+    ws.onclose = ev => {
+      if (ev.code === 4401) { location.href = "/?login=1"; return; }
+      status("Reconectando", "warn");
+      if (flying) setTimeout(() => flying && connect(), 1500);
+    };
+  }
+
+  // Bucle: captura un frame, lo manda y espera la respuesta antes del siguiente.
+  function loop() {
+    if (!flying) return;
+    requestAnimationFrame(loop);
+    draw();
+    const now = performance.now();
+    if (waiting && now - sentAt > 8000) waiting = false; // respuesta perdida
+    if (waiting || now - lastSent < MIN_INTERVAL) return;
+    if (!ws || ws.readyState !== 1 || !video.videoWidth) return;
+    const vw = video.videoWidth, vh = video.videoHeight;
+    const w = SEND_W, h = Math.round(vh * SEND_W / vw);
+    grab.width = w; grab.height = h;
+    gctx.drawImage(video, 0, 0, w, h);
+    const image = grab.toDataURL("image/jpeg", 0.65);
+    ws.send(JSON.stringify({ type: "frame", image, w, h }));
+    waiting = true; lastSent = now; sentAt = now;
+  }
+
+  // Pinta las cajas encima del video respetando el recorte de object-fit: cover.
+  function draw() {
+    const cw = overlay.clientWidth, ch = overlay.clientHeight, dpr = devicePixelRatio || 1;
+    if (overlay.width !== Math.round(cw * dpr) || overlay.height !== Math.round(ch * dpr)) {
+      overlay.width = Math.round(cw * dpr); overlay.height = Math.round(ch * dpr);
+    }
+    octx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    octx.clearRect(0, 0, cw, ch);
+    if (!lastResult || performance.now() - lastResult.at > BOX_TTL || !video.videoWidth) return;
+    const vw = video.videoWidth, vh = video.videoHeight;
+    const s = Math.max(cw / vw, ch / vh);
+    const dw = vw * s, dh = vh * s;
+    DCYM.drawBoxes(octx, lastResult.preds, lastResult.w, lastResult.h, dw, dh, (cw - dw) / 2, (ch - dh) / 2, cw);
+  }
+
+  async function keepAwake() {
+    try { wakeLock = await navigator.wakeLock?.request("screen"); } catch {}
+  }
+  document.addEventListener("visibilitychange", () => { if (flying && document.visibilityState === "visible") keepAwake(); });
+
+  $("takeoff").addEventListener("click", async () => {
+    $("setupError").classList.remove("show");
+    localStorage.setItem("dcym_drone_name", nameInput.value.trim());
+    const btn = $("takeoff"); btn.disabled = true;
+    try {
+      await startCamera();
+    } catch (e) {
+      btn.disabled = false;
+      const denied = e.name === "NotAllowedError";
+      showSetupError(denied
+        ? "Permiso de cámara denegado. Actívalo en la configuración del navegador para este sitio y vuelve a intentarlo."
+        : "No se pudo abrir la cámara: " + e.message);
+      return;
+    }
+    $("setup").style.display = "none";
+    $("flight").classList.add("on");
+    $("hudName").textContent = nameInput.value.trim() || "Dron";
+    flying = true;
+    keepAwake();
+    connect();
+    loop();
+    btn.disabled = false;
+  });
+
+  $("flip").addEventListener("click", async () => {
+    facing = facing === "environment" ? "user" : "environment";
+    try { await startCamera(); } catch (e) { DCYM.toast("No se pudo cambiar de cámara", true); }
+  });
+
+  $("land").addEventListener("click", () => {
+    flying = false;
+    if (ws) ws.close();
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    try { wakeLock?.release(); } catch {}
+    lastResult = null;
+    $("flight").classList.remove("on");
+    $("setup").style.display = "";
+  });
+</script>
+</body>
+</html>

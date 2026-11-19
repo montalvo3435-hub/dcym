@@ -1,0 +1,753 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DCYM S.A.S — Dron Control y Monitoreo</title>
+<meta name="description" content="Monitoreo de ganado con drones e inteligencia artificial. Detección y conteo de bovinos en tiempo real.">
+<meta name="theme-color" content="#050a07">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/dcym.css?v=13">
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<style>
+  /* ---------- cabecera ---------- */
+  .site-header {
+    position: fixed; inset: 0 0 auto 0; z-index: 40;
+    transition: background .25s, border-color .25s;
+    border-bottom: 1px solid transparent;
+  }
+  .site-header.scrolled { background: rgba(5,10,7,.88); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-color: var(--line); }
+  .site-header .wrap { display: flex; align-items: center; justify-content: space-between; height: 72px; gap: 16px; }
+  .nav { display: flex; gap: 28px; font-weight: 600; font-size: 15px; color: var(--muted); }
+  .nav a:hover { color: var(--text); }
+  .header-actions { position: relative; display: flex; align-items: center; gap: 10px; }
+
+  /* ---------- login en la esquina ---------- */
+  .login-pop {
+    position: absolute; top: calc(100% + 12px); right: 0; width: 340px; max-width: calc(100vw - 32px);
+    padding: 22px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line-2);
+    box-shadow: var(--shadow); transform-origin: top right;
+    opacity: 0; transform: translateY(-6px) scale(.98); pointer-events: none; transition: opacity .18s, transform .18s;
+  }
+  .login-pop.open { opacity: 1; transform: none; pointer-events: auto; }
+  .login-pop::before {
+    content: ""; position: absolute; top: -7px; right: 28px; width: 12px; height: 12px;
+    background: var(--surface); border-left: 1px solid var(--line-2); border-top: 1px solid var(--line-2); transform: rotate(45deg);
+  }
+  .login-pop h3 { margin: 0 0 2px; font-size: 20px; }
+  .login-pop p.sub { margin: 0 0 18px; font-size: 14px; color: var(--muted); }
+  .login-pop .btn { width: 100%; }
+  .login-pop .note { margin: 14px 0 0; font-size: 12.5px; color: var(--dim); display: flex; gap: 8px; align-items: flex-start; }
+  .login-pop .note svg { width: 14px; height: 14px; flex: none; margin-top: 2px; }
+
+  /* ---------- hero ---------- */
+  .hero {
+    position: relative; min-height: 100svh; display: flex; align-items: flex-end;
+    padding: 120px 0 56px; overflow: hidden; isolation: isolate;
+  }
+  .hero-bg {
+    position: absolute; inset: 0; z-index: -3;
+    background:
+      radial-gradient(900px 620px at 72% 42%, rgba(0,230,126,.13), transparent 62%),
+      radial-gradient(600px 400px at 90% 90%, rgba(255,106,26,.07), transparent 70%),
+      var(--bg);
+  }
+  .hero-bg::after {
+    content: ""; position: absolute; inset: 0;
+    background-image: linear-gradient(rgba(0,230,126,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(0,230,126,.06) 1px, transparent 1px);
+    background-size: 56px 56px;
+    -webkit-mask-image: radial-gradient(ellipse 70% 60% at 70% 45%, #000 20%, transparent 75%);
+            mask-image: radial-gradient(ellipse 70% 60% at 70% 45%, #000 20%, transparent 75%);
+  }
+  .hero-drone {
+    position: absolute; z-index: -2; right: 1vw; top: 46%; transform: translateY(-50%);
+    width: min(56vw, 900px); height: auto; pointer-events: none; user-select: none;
+    filter: drop-shadow(0 40px 60px rgba(0,0,0,.55));
+  }
+  .hero-drone-cap {
+    position: absolute; z-index: -1; right: 4vw; top: calc(46% + min(19vw, 300px));
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: 1.6px; text-transform: uppercase; color: var(--dim);
+  }
+  .hero::after {
+    content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+    background:
+      linear-gradient(180deg, rgba(5,10,7,0) 60%, var(--bg) 100%),
+      linear-gradient(90deg, rgba(5,10,7,.92) 0%, rgba(5,10,7,.55) 38%, rgba(5,10,7,0) 60%);
+  }
+  .hero h1 {
+    font-family: var(--font-display); font-weight: 400; letter-spacing: 1px;
+    font-size: clamp(56px, 11vw, 132px); line-height: .9; margin: 18px 0 18px;
+  }
+  .hero h1 em { font-style: normal; color: var(--green); }
+  .hero p.lead { font-size: clamp(18px, 2.2vw, 22px); color: #cfe3d7; max-width: 560px; margin: 0 0 28px; font-weight: 500; }
+  .hero-ctas { display: flex; flex-wrap: wrap; gap: 12px; }
+  .hero-stats {
+    margin-top: 56px; display: grid; grid-template-columns: repeat(4, 1fr);
+    border: 1px solid var(--line); border-radius: var(--radius); background: rgba(10,18,13,.72);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  }
+  .hero-stats div { padding: 18px 22px; border-left: 1px solid var(--line); }
+  .hero-stats div:first-child { border-left: 0; }
+  .hero-stats b { display: block; font-family: var(--font-display); font-weight: 400; font-size: 38px; line-height: 1; color: var(--text); }
+  .hero-stats b span { color: var(--green); }
+  .hero-stats small { font-size: 13px; color: var(--muted); font-weight: 600; letter-spacing: .3px; }
+
+  /* ---------- secciones ---------- */
+  section.block { padding: 96px 0; border-top: 1px solid var(--line); }
+  .eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: 2.4px; text-transform: uppercase; color: var(--green); }
+  h2.title { font-family: var(--font-display); font-weight: 400; font-size: clamp(40px, 6vw, 64px); line-height: .95; letter-spacing: .5px; margin: 10px 0 18px; }
+  .section-lead { color: var(--muted); font-size: 19px; max-width: 640px; margin: 0; }
+
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 44px; }
+  .feature { padding: 26px; }
+  .feature .ico {
+    width: 44px; height: 44px; border-radius: 11px; display: grid; place-items: center; margin-bottom: 18px;
+    background: var(--orange-soft); color: var(--orange);
+  }
+  .feature .ico svg { width: 22px; height: 22px; }
+  .feature h3 { margin: 0 0 6px; font-size: 21px; }
+  .feature p { margin: 0; color: var(--muted); font-size: 16px; }
+
+  /* usuario */
+  .persona { display: grid; grid-template-columns: 1.1fr 1fr; gap: 16px; margin-top: 44px; }
+  .persona-main { padding: 30px; display: grid; grid-template-columns: auto 1fr; gap: 22px; align-items: start; }
+  .persona-avatar {
+    width: 84px; height: 84px; border-radius: 20px; display: grid; place-items: center;
+    background: linear-gradient(135deg, #1d3a28, #0f1f15); border: 1px solid var(--line-2);
+    font-family: var(--font-display); font-size: 40px; color: var(--green);
+  }
+  .persona-main h3 { margin: 0; font-size: 24px; }
+  .persona-main .role { color: var(--green); font-family: var(--font-mono); font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; }
+  .persona-main blockquote { margin: 14px 0 0; padding-left: 14px; border-left: 2px solid var(--orange); color: #cfe3d7; font-size: 17px; font-style: italic; }
+  .persona-lists { display: grid; gap: 16px; }
+  .persona-lists .card { padding: 22px 24px; }
+  .persona-lists h4 { margin: 0 0 10px; font-size: 13px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--muted); }
+  .persona-lists ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+  .persona-lists li { display: flex; gap: 10px; align-items: flex-start; font-size: 16px; }
+  .persona-lists li::before { content: ""; width: 6px; height: 6px; border-radius: 2px; background: var(--green); margin-top: 9px; flex: none; }
+  .persona-lists .pain li::before { background: var(--orange); }
+
+  /* flujo */
+  .flow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 44px; counter-reset: step; }
+  .step { padding: 24px; position: relative; }
+  .step .num { font-family: var(--font-mono); font-size: 12px; color: var(--green); letter-spacing: 2px; }
+  .step h3 { margin: 10px 0 6px; font-size: 20px; }
+  .step p { margin: 0; color: var(--muted); font-size: 15.5px; }
+  .step:not(:last-child)::after {
+    content: ""; position: absolute; top: 34px; right: -13px; width: 10px; height: 10px; z-index: 2;
+    border-top: 2px solid var(--green); border-right: 2px solid var(--green); transform: rotate(45deg);
+  }
+
+  /* modelo */
+  .model { display: grid; grid-template-columns: 1fr 1.15fr; gap: 48px; align-items: center; }
+  .metrics { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  .metric { padding: 22px; }
+  .metric small { display: block; font-size: 13px; color: var(--muted); font-weight: 600; letter-spacing: .5px; text-transform: uppercase; }
+  .metric b { display: block; font-family: var(--font-display); font-weight: 400; font-size: 52px; line-height: 1; margin-top: 6px; }
+  .metric .bar { height: 4px; border-radius: 4px; background: var(--line); margin-top: 14px; overflow: hidden; }
+  .metric .bar i { display: block; height: 100%; background: var(--green); border-radius: 4px; }
+  .specs { margin: 26px 0 0; padding: 0; list-style: none; border-top: 1px solid var(--line); }
+  .specs li { display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); font-size: 16px; }
+  .specs li span:first-child { color: var(--muted); }
+  .specs li span:last-child { font-family: var(--font-mono); font-size: 13.5px; text-align: right; }
+
+  /* prototipo */
+  .visor-wrap { margin-top: 40px; }
+  .proto-specs { display: grid; grid-template-columns: repeat(6, 1fr); margin-top: 16px; }
+  .proto-specs div { padding: 16px 18px; border-left: 1px solid var(--line); }
+  .proto-specs div:first-child { border-left: 0; }
+  .proto-specs b { display: block; font-family: var(--font-display); font-weight: 400; font-size: 30px; line-height: 1; }
+  .proto-specs small { display: block; margin-top: 4px; font-size: 13px; color: var(--muted); font-weight: 600; }
+  .proto-full { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 12px; font-size: 14.5px; color: var(--dim); }
+
+  /* del celular al dron */
+  .map { margin-top: 40px; display: grid; gap: 10px; }
+  .map-row { display: grid; grid-template-columns: 1fr 40px 1fr; align-items: center; gap: 10px; }
+  .map-row .card { padding: 16px 18px; display: flex; gap: 14px; align-items: center; min-height: 72px; }
+  .map-row .card b { display: block; font-size: 17px; }
+  .map-row .card small { color: var(--muted); font-size: 14px; }
+  .map-row .now { border-style: dashed; }
+  .map-row .to { color: var(--green); display: grid; place-items: center; }
+  .map-row .to svg { width: 26px; height: 26px; }
+  .map-row .ic { width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; background: var(--surface-2); color: var(--muted); flex: none; }
+  .map-row .future .ic { background: var(--green-soft); color: var(--green); }
+  .map-row .ic svg { width: 20px; height: 20px; }
+  .map-head { display: grid; grid-template-columns: 1fr 40px 1fr; gap: 10px; font-family: var(--font-mono); font-size: 11.5px; letter-spacing: 1.6px; text-transform: uppercase; color: var(--dim); }
+  .map-head span:last-child { color: var(--green); }
+
+  /* piezas */
+  .parts-group { margin-top: 40px; }
+  .parts-group h3 { margin: 0 0 14px; font-size: 14px; letter-spacing: 1.6px; text-transform: uppercase; color: var(--muted); display: flex; align-items: center; gap: 10px; }
+  .parts-group h3::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+  .parts { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+  .part { overflow: hidden; display: flex; flex-direction: column; scroll-margin-top: 90px; transition: border-color .2s, transform .2s; }
+  .part:target { border-color: var(--green); box-shadow: 0 0 0 3px var(--green-soft); }
+  .part-img { background: #fff; height: 172px; display: flex; align-items: center; justify-content: center; padding: 14px; }
+  .part-img img { max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; }
+  .part-img.dark { background: radial-gradient(circle at 50% 40%, #12241a, #0a120d 70%); }
+  .part-body { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+  .part-body .qty { font-family: var(--font-mono); font-size: 11px; letter-spacing: 1.4px; color: var(--green); text-transform: uppercase; }
+  .part-body h4 { margin: 0; font-size: 17.5px; line-height: 1.2; }
+  .part-body p { margin: 0; color: var(--muted); font-size: 14.5px; line-height: 1.4; flex: 1; }
+  .part-body a { margin-top: 6px; font-weight: 700; font-size: 14px; color: var(--green); }
+  .part-body .local { margin-top: 6px; font-weight: 700; font-size: 14px; color: var(--orange); }
+  .parts-note { margin-top: 22px; font-size: 13.5px; color: var(--dim); max-width: 820px; }
+
+  /* autonomía */
+  .endur { display: grid; grid-template-columns: 1fr 1.25fr; gap: 40px; align-items: start; margin-top: 40px; }
+  .endur ul { margin: 18px 0 0; padding: 0; list-style: none; display: grid; gap: 12px; }
+  .endur li { display: grid; grid-template-columns: 26px 1fr; gap: 10px; font-size: 16.5px; }
+  .endur li b { color: var(--text); }
+  .endur li i { width: 26px; height: 26px; border-radius: 8px; background: var(--green-soft); color: var(--green); display: grid; place-items: center; font-style: normal; font-family: var(--font-mono); font-size: 12px; }
+  .endur .honest { margin-top: 18px; padding: 14px 16px; border-left: 3px solid var(--orange); background: var(--orange-soft); border-radius: 0 10px 10px 0; font-size: 14.5px; color: #f3d9c9; }
+  .relay { padding: 22px; }
+  .relay h4 { margin: 0 0 4px; font-size: 18px; }
+  .relay > p { margin: 0 0 18px; color: var(--muted); font-size: 14.5px; }
+  .tl { display: grid; grid-template-columns: 84px 1fr; gap: 10px 12px; align-items: center; }
+  .tl-label { font-weight: 700; font-size: 14.5px; }
+  .tl-track { position: relative; height: 26px; border-radius: 7px; background: var(--bg-2); border: 1px solid var(--line); overflow: hidden; }
+  .tl-track span { position: absolute; top: 3px; bottom: 3px; border-radius: 5px; }
+  .tl-track .fly { background: var(--green); }
+  .tl-track .swap { background: var(--orange); }
+  .tl-track .cover { background: repeating-linear-gradient(90deg, rgba(0,230,126,.85) 0 6px, rgba(0,230,126,.55) 6px 12px); }
+  .tl-axis { grid-column: 2; display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 11px; color: var(--dim); }
+  .tl-legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 16px; font-size: 13.5px; color: var(--muted); }
+  .tl-legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+  .fleet { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 18px; }
+  .fleet div { padding: 12px 14px; border-radius: 10px; background: var(--bg-2); border: 1px solid var(--line); }
+  .fleet b { display: block; font-family: var(--font-display); font-weight: 400; font-size: 32px; line-height: 1; color: var(--green); }
+  .fleet small { color: var(--muted); font-size: 13px; font-weight: 600; }
+
+  /* hoja de ruta */
+  .road { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 40px; }
+  .road .card { padding: 22px; position: relative; }
+  .road .st { display: inline-flex; align-items: center; gap: 7px; font-family: var(--font-mono); font-size: 11px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--dim); }
+  .road .done .st { color: var(--green); }
+  .road .next .st { color: var(--orange); }
+  .road .done { border-color: rgba(0,230,126,.45); }
+  .road h3 { margin: 10px 0 6px; font-size: 19px; }
+  .road p { margin: 0; color: var(--muted); font-size: 15px; }
+
+  /* cta final */
+  .cta { text-align: center; padding: 96px 0 110px; border-top: 1px solid var(--line); background: radial-gradient(600px 300px at 50% 0%, rgba(0,230,126,.10), transparent 70%); }
+  .cta h2 { margin-inline: auto; max-width: 760px; }
+  .cta p { margin: 0 auto 28px; }
+
+  footer { border-top: 1px solid var(--line); padding: 28px 0 36px; color: var(--dim); font-size: 14px; }
+  footer .wrap { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; align-items: center; }
+
+  /* ---------- responsive ---------- */
+  @media (max-width: 980px) {
+    .nav { display: none; }
+    .hero { flex-direction: column; justify-content: flex-end; padding-top: 92px; }
+    .hero-drone { position: relative; right: auto; top: auto; transform: none; width: 112%; max-width: 680px; align-self: center; margin: 0 0 -12px; }
+    .hero-drone-cap { display: none; }
+    .hero::after { background: linear-gradient(180deg, rgba(5,10,7,0) 70%, var(--bg) 100%); }
+    .grid-3, .flow { grid-template-columns: 1fr 1fr; }
+    .step:nth-child(2)::after { display: none; }
+    .model, .persona, .endur { grid-template-columns: 1fr; }
+    .proto-specs { grid-template-columns: repeat(3, 1fr); }
+    .proto-specs div:nth-child(4) { border-left: 0; }
+    .proto-specs div:nth-child(n+4) { border-top: 1px solid var(--line); }
+    .road { grid-template-columns: 1fr 1fr; }
+    .hero-stats { grid-template-columns: 1fr 1fr; }
+    .hero-stats div:nth-child(3) { border-left: 0; }
+    .hero-stats div:nth-child(n+3) { border-top: 1px solid var(--line); }
+  }
+  @media (max-width: 640px) {
+    body { font-size: 16px; }
+    .proto-specs { grid-template-columns: 1fr 1fr; }
+    .proto-specs div:nth-child(odd) { border-left: 0; }
+    .proto-specs div:nth-child(4) { border-left: 1px solid var(--line); }
+    .proto-specs div:nth-child(n+3) { border-top: 1px solid var(--line); }
+    .map-head { display: none; }
+    .map-row { grid-template-columns: 1fr; gap: 4px; }
+    .map-row .to { transform: rotate(90deg); height: 26px; }
+    .road, .fleet { grid-template-columns: 1fr; }
+    .parts { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .part-body h4 { font-size: 15.5px; }
+    .part-body p { font-size: 13.5px; }
+    .tl { grid-template-columns: 64px 1fr; }
+    .part-img { height: 128px; padding: 10px; }
+    .site-header .wrap { height: 64px; }
+    .header-actions .btn-ghost { display: none; }
+    .grid-3, .flow { grid-template-columns: 1fr; }
+    .step::after { display: none; }
+    .persona-main { grid-template-columns: 1fr; }
+    section.block { padding: 72px 0; }
+    .hero-stats b { font-size: 30px; }
+    .hero-stats div { padding: 14px 16px; }
+    .metric b { font-size: 42px; }
+    .login-pop { position: fixed; top: 72px; right: 16px; left: 16px; width: auto; max-width: none; }
+    .login-pop::before { right: 34px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="site-header" id="header">
+  <div class="wrap">
+    <a href="/" class="brand" aria-label="DCYM inicio">
+      <span class="brand-mark" data-brand-icon></span>
+      <span class="brand-name">DCYM<small>DRON CONTROL Y MONITOREO</small></span>
+    </a>
+    <nav class="nav" aria-label="Secciones">
+      <a href="#problema">Problema</a>
+      <a href="#usuario">Usuario</a>
+      <a href="#como-funciona">Cómo funciona</a>
+      <a href="#modelo">Modelo IA</a>
+      <a href="#prototipo">Prototipo</a>
+      <a href="#piezas">Piezas</a>
+      <a href="#autonomia">Autonomía</a>
+    </nav>
+    <div class="header-actions">
+      <a href="#como-funciona" class="btn btn-ghost btn-sm">Ver demo</a>
+      <button class="btn btn-primary btn-sm" id="loginBtn" aria-haspopup="dialog" aria-expanded="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/></svg>
+        <span id="loginBtnText">Iniciar sesión</span>
+      </button>
+
+      <div class="login-pop" id="loginPop" role="dialog" aria-labelledby="loginTitle">
+        <h3 id="loginTitle">Centro de control</h3>
+        <p class="sub">Ingresa para operar los drones y ver el monitoreo en vivo.</p>
+        <form id="loginForm" autocomplete="on">
+          <div class="field">
+            <label for="user">Usuario</label>
+            <input class="input" id="user" name="username" autocomplete="username" autocapitalize="off" spellcheck="false" required>
+          </div>
+          <div class="field">
+            <label for="pass">Contraseña</label>
+            <input class="input" id="pass" name="password" type="password" autocomplete="current-password" required>
+          </div>
+          <div class="form-error" id="loginErr" role="alert"></div>
+          <button class="btn btn-primary" type="submit" id="loginSubmit">Entrar</button>
+        </form>
+        <p class="note">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          Conexión cifrada. Acceso para el equipo DCYM y asistentes de la demostración.
+        </p>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-bg"></div>
+    <img class="hero-drone" src="/static/media/render/dron-3d.png?v=2" alt="Modelo 3D del dron DCYM Rastreador V1" width="1360" height="879" fetchpriority="high">
+    <a class="hero-drone-cap" href="#prototipo">Modelo 3D · DCYM Rastreador V1 →</a>
+    <div class="wrap">
+      <span class="tag"><span class="dot"></span>UAV · Visión por computador · Córdoba, Colombia</span>
+      <h1>Tu ganado,<br><em>bajo control.</em></h1>
+      <p class="lead">Drones que recorren la finca, una IA que detecta y cuenta cada animal, y un centro de monitoreo que lo muestra en tiempo real.</p>
+      <div class="hero-ctas">
+        <button class="btn btn-primary" data-open-login>Entrar al centro de control</button>
+        <a href="#como-funciona" class="btn btn-ghost">Cómo funciona</a>
+      </div>
+      <div class="hero-stats">
+        <div><b>2.4<span>M</span></b><small>Cabezas bovinas en Córdoba</small></div>
+        <div><b>2.237</b><small>Imágenes de entrenamiento</small></div>
+        <div><b>&lt;100<span>ms</span></b><small>Respuesta de la IA</small></div>
+        <div><b>45–60<span>min</span></b><small>Autonomía objetivo por vuelo</small></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 1. PROBLEMA -->
+  <section class="block" id="problema">
+    <div class="wrap">
+      <div class="eyebrow">01 — El problema</div>
+      <h2 class="title">Contar el hato a caballo<br>ya no alcanza.</h2>
+      <p class="section-lead">Córdoba es el segundo departamento ganadero de Colombia. En pastoreo extensivo es imposible saber en todo momento dónde está cada animal y cuántos hay.</p>
+      <div class="grid-3">
+        <article class="card feature">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg></div>
+          <h3>Abigeato y pérdidas</h3>
+          <p>Los animales se pierden o son robados y el ganadero se entera días después, cuando ya es tarde.</p>
+        </article>
+        <article class="card feature">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20l6-12 4 7 3-4 5 9z"/></svg></div>
+          <h3>Terreno difícil</h3>
+          <p>Potreros extensos, montes y zonas inundables que toman horas de recorrido para revisar.</p>
+        </article>
+        <article class="card feature">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h8M8 15h5"/></svg></div>
+          <h3>Inventario manual</h3>
+          <p>El conteo se hace a ojo, con errores, y nunca está actualizado cuando se necesita.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. USUARIO -->
+  <section class="block" id="usuario">
+    <div class="wrap">
+      <div class="eyebrow">02 — Para quién</div>
+      <h2 class="title">Diseñado para quien<br>vive la finca.</h2>
+      <div class="persona">
+        <article class="card persona-main">
+          <div class="persona-avatar">CR</div>
+          <div>
+            <span class="role">Ganadero · Montería</span>
+            <h3>Carlos, 48 años</h3>
+            <p class="muted" style="margin:6px 0 0">Propietario de una finca de 300 ha con 250 cabezas. Usa WhatsApp y el celular a diario, no es experto en tecnología.</p>
+            <blockquote>“Quiero abrir el celular y saber cuántas reses tengo y dónde están, sin mandar a nadie a recorrer.”</blockquote>
+          </div>
+        </article>
+        <div class="persona-lists">
+          <div class="card">
+            <h4>Necesidades</h4>
+            <ul>
+              <li>Conteo rápido y confiable del hato</li>
+              <li>Ver la finca en vivo desde cualquier lugar</li>
+              <li>Algo simple: entrar y ver, sin configurar</li>
+            </ul>
+          </div>
+          <div class="card pain">
+            <h4>Frustraciones</h4>
+            <ul>
+              <li>Recorridos largos que no garantizan el conteo</li>
+              <li>Apps llenas de menús y términos técnicos</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. CÓMO FUNCIONA -->
+  <section class="block" id="como-funciona">
+    <div class="wrap">
+      <div class="eyebrow">03 — Cómo funciona</div>
+      <h2 class="title">Del aire al tablero<br>en un segundo.</h2>
+      <p class="section-lead">En esta demostración cada teléfono hace el papel de un dron: su cámara transmite al servidor, la IA detecta las vacas y el centro de monitoreo lo muestra al instante.</p>
+      <div class="flow">
+        <article class="card step"><div class="num">PASO 01</div><h3>Inicia sesión</h3><p>Entra con la cuenta del equipo desde el botón de la esquina superior.</p></article>
+        <article class="card step"><div class="num">PASO 02</div><h3>Despega el dron</h3><p>Activa el modo dron: el teléfono abre la cámara y empieza a transmitir.</p></article>
+        <article class="card step"><div class="num">PASO 03</div><h3>La IA detecta</h3><p>Nuestro modelo entrenado en Roboflow encuentra y cuenta cada vaca en la imagen.</p></article>
+        <article class="card step"><div class="num">PASO 04</div><h3>Monitorea en vivo</h3><p>El centro de monitoreo muestra todos los drones, sus cámaras y el conteo total.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <!-- MODELO -->
+  <section class="block" id="modelo">
+    <div class="wrap model">
+      <div>
+        <div class="eyebrow">04 — Inteligencia artificial</div>
+        <h2 class="title">Un modelo entrenado<br>para ver ganado.</h2>
+        <p class="section-lead">Entrenamos un detector propio con 2.237 imágenes de ganado. Además de encontrar cada animal, reconoce si está pastando o de pie.</p>
+        <ul class="specs">
+          <li><span>Arquitectura</span><span>Roboflow 3.0 Object Detection (Fast)</span></li>
+          <li><span>Versión</span><span>v2 · cow-o7npg-zouq2/2</span></li>
+          <li><span>Dataset</span><span>2.237 imágenes · 640×640</span></li>
+          <li><span>Clases</span><span>Ganado · pastando · de pie</span></li>
+        </ul>
+      </div>
+      <div class="metrics">
+        <div class="card metric"><small>mAP@50</small><b>69.1%</b><div class="bar"><i style="width:69.1%"></i></div></div>
+        <div class="card metric"><small>Precisión</small><b>67.5%</b><div class="bar"><i style="width:67.5%"></i></div></div>
+        <div class="card metric"><small>Recall</small><b>70.9%</b><div class="bar"><i style="width:70.9%"></i></div></div>
+        <div class="card metric"><small>F1</small><b>69.2%</b><div class="bar"><i style="width:69.2%"></i></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROTOTIPO -->
+  <section class="block" id="prototipo">
+    <div class="wrap">
+      <div class="eyebrow">05 — Prototipo</div>
+      <h2 class="title">DCYM Rastreador V1</h2>
+      <p class="section-lead">Un diseño real, hecho con piezas comerciales que se consiguen hoy: cuadricóptero de 650 mm, hélices de 15″ y batería de litio-ion, pensado para vuelos largos sobre los potreros. Gíralo y toca cada pieza.</p>
+
+      <div class="visor-wrap">
+        <div class="visor card" id="visor">
+          <div class="visor-stage" data-canvas>
+            <div class="visor-hint">Arrastra para girar · toca una pieza</div>
+            <div class="visor-tip" data-tip></div>
+            <div class="visor-tools">
+              <button type="button" data-act="explode" aria-pressed="false">Vista explosionada</button>
+              <button type="button" data-act="spin" aria-pressed="false">Hélices</button>
+              <button type="button" data-act="rotate" aria-pressed="true">Girar solo</button>
+              <a href="/modelo">Pantalla completa ↗</a>
+            </div>
+          </div>
+          <aside class="visor-side">
+            <div class="visor-info" data-info>
+              <span class="visor-kicker">Modelo 3D a escala</span>
+              <h4>14 piezas, todas reales</h4>
+              <p>Cada pieza del modelo corresponde a un componente comercial. Tócala para ver qué hace.</p>
+            </div>
+            <ul class="visor-list" data-list></ul>
+          </aside>
+        </div>
+        <div class="card proto-specs">
+          <div><b>650 mm</b><small>Entre motores</small></div>
+          <div><b>15″</b><small>Hélices de carbono</small></div>
+          <div><b>6S Li-ion</b><small>Batería 21700, ~300 Wh</small></div>
+          <div><b>~3,2 kg</b><small>Peso estimado al despegar</small></div>
+          <div><b>45–60 min</b><small>Autonomía objetivo</small></div>
+          <div><b>4G + RF</b><small>Video, telemetría y mando</small></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DEL CELULAR AL DRON -->
+  <section class="block" id="del-celular-al-dron">
+    <div class="wrap">
+      <div class="eyebrow">06 — Del celular al dron</div>
+      <h2 class="title">Lo que funciona hoy<br>es lo que va a volar.</h2>
+      <p class="section-lead">En la demostración cada teléfono hace de dron. No es un truco: el teléfono tiene justo lo que necesita un dron de monitoreo. Para pasar al dron real, cada parte del teléfono se cambia por su pieza equivalente y el software sigue siendo el mismo.</p>
+      <div class="map">
+        <div class="map-head"><span>Hoy · prototipo con celular</span><span></span><span>Rastreador V1 · dron real</span></div>
+        <div class="map-row">
+          <div class="card now"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span><div><b>Cámara del celular</b><small>Captura el potrero en el modo dron</small></div></div>
+          <div class="to" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+          <div class="card future"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span><div><b>Cámara Module 3 Wide</b><small>12 MP, lente de 120°, mirando hacia adelante y abajo</small></div></div>
+        </div>
+        <div class="map-row">
+          <div class="card now"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20h.01M7 20v-4M12 20v-8M17 20V8M22 4v16"/></svg></span><div><b>Datos móviles</b><small>Envían las imágenes al servidor</small></div></div>
+          <div class="to" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+          <div class="card future"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20h.01M7 20v-4M12 20v-8M17 20V8M22 4v16"/></svg></span><div><b>Módem 4G SIM7600G-H</b><small>Misma red celular, conectado a la Raspberry Pi</small></div></div>
+        </div>
+        <div class="map-row">
+          <div class="card now"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s7-6.1 7-12a7 7 0 0 0-14 0c0 5.9 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></svg></span><div><b>GPS del celular</b><small>Ubicación del teléfono</small></div></div>
+          <div class="to" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+          <div class="card future"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s7-6.1 7-12a7 7 0 0 0-14 0c0 5.9 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></svg></span><div><b>GPS M10 + Pixhawk 6C</b><small>Posición precisa y vuelo automático por rutas</small></div></div>
+        </div>
+        <div class="map-row">
+          <div class="card now"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="14" height="14" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></svg></span><div><b>Procesador del celular</b><small>Corre la página del modo dron</small></div></div>
+          <div class="to" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+          <div class="card future"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="14" height="14" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></svg></span><div><b>Raspberry Pi 5</b><small>Corre el mismo programa, sin pantalla</small></div></div>
+        </div>
+        <div class="map-row">
+          <div class="card now"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="18" height="10" rx="2"/><path d="M22 11v2M6 10v4M10 10v4"/></svg></span><div><b>Batería del celular</b><small>Unas horas de transmisión</small></div></div>
+          <div class="to" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+          <div class="card future"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="18" height="10" rx="2"/><path d="M22 11v2M6 10v4M10 10v4"/></svg></span><div><b>Batería 6S3P Li-ion</b><small>Alimenta motores y electrónica durante el vuelo</small></div></div>
+        </div>
+        <div class="map-row">
+          <div class="card now"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19a4.5 4.5 0 1 0-1.4-8.8A6 6 0 1 0 6 16.9"/><path d="M8 19h9.5"/></svg></span><div><b>IA en Roboflow + centro de monitoreo</b><small>Detecta y cuenta las vacas en vivo</small></div></div>
+          <div class="to" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+          <div class="card future"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19a4.5 4.5 0 1 0-1.4-8.8A6 6 0 1 0 6 16.9"/><path d="M8 19h9.5"/></svg></span><div><b>Sin cambios</b><small>El servidor, el modelo y el panel ya están listos</small></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PIEZAS -->
+  <section class="block" id="piezas">
+    <div class="wrap">
+      <div class="eyebrow">07 — Lista de piezas</div>
+      <h2 class="title">Las piezas que lleva.</h2>
+      <p class="section-lead">Todas son productos comerciales que se venden hoy en Amazon. Sin precios: aquí lo importante es qué lleva el dron y para qué sirve cada pieza.</p>
+
+      <div class="parts-group"><h3>Vuelo</h3><div class="parts">
+          <article class="card part" id="pieza-marco">
+            <div class="part-img"><img src="/static/media/partes/marco-tarot-650.jpg" alt="Marco Tarot 650" loading="lazy"></div>
+            <div class="part-body"><span class="qty">1 unidad</span><h4>Marco Tarot 650</h4><p>Estructura plegable de fibra de carbono, 650 mm entre motores. Liviana y fácil de transportar en la camioneta.</p><a href="https://www.amazon.com/dp/B00O0NGT8A" target="_blank" rel="noopener noreferrer">Ver en Amazon ↗</a></div>
+          </article>
+          <article class="card part" id="pieza-motores">
+            <div class="part-img"><img src="/static/media/partes/motor-tarot-4114.jpg" alt="Motor Tarot 4114 320KV" loading="lazy"></div>
+            <div class="part-body"><span class="qty">4 unidades</span><h4>Motor Tarot 4114 320KV</h4><p>Bajo KV y alta eficiencia: mueven hélices grandes despacio, que es lo que alarga el vuelo.</p><a href="https://www.amazon.com/dp/B0832RTZD4" target="_blank" rel="noopener noreferrer">Ver en Amazon ↗</a></div>
+          </article>
+          <article class="card part" id="pieza-helices">
+            <div class="part-img"><img src="/static/media/partes/helice-tarot-1555.jpg" alt="Hélices Tarot 1555 de carbono" loading="lazy"></div>
+            <div class="part-body"><span class="qty">2 pares + repuesto</span><h4>Hélices Tarot 1555 de carbono</h4><p>15 pulgadas, rígidas y livianas. Un par gira a la derecha y otro a la izquierda.</p><a href="https://www.amazon.com/dp/B00W193HT4" target="_blank" rel="noopener noreferrer">Ver en Amazon ↗</a></div>
+          </article>
+          <article class="card part" id="pieza-esc">
+            <div class="part-img"><img src="/static/media/partes/esc-xrotor-40a.jpg" alt="Variador Hobbywing XRotor 40A" loading="lazy"></div>
+            <div class="part-body"><span class="qty">4 unidades</span><h4>Variador Hobbywing XRotor 40A</h4><p>Controla la velocidad de cada motor. Diseñado para multirrotores de 550–650 mm a 6S.</p><a href="https://www.amazon.com/dp/B00P1Q760U" target="_blank" rel="noopener noreferrer">Ver en Amazon ↗</a></div>
+          </article>
+          <article class="card part" id="pieza-pixhawk">
+            <div class="part-img"><img src="/static/media/partes/pixhawk-6c.jpg" alt="Piloto automático Pixhawk 6C" loading="lazy"></div>
+            <div class="part-body"><span class="qty">1 unidad</span><h4>Piloto automático Pixhawk 6C</h4><p>Estabiliza el dron y vuela rutas por GPS con ArduPilot. Incluye el módulo de potencia PM02.</p><a href="https://www.amazon.com/dp/B0C3LH2V45" target="_blank" rel="noopener noreferrer">Ver en Amazon ↗</a></div>
+          </article>
+          <article class="card part" id="pieza-gps">
+            <div class="part-img"><img src="/static/media/partes/gps-m10.jpg" alt="GPS Matek M10Q con brújula" loading="lazy"></div>
+            <div class="part-body"><span class="qty">1 unidad</span><h4>GPS Matek M10Q con brújula</h4><p>Recibe GPS, GLONASS, Galileo y BeiDou a la vez para ubicarse con precisión y volver a casa.</p><a href="https://www.amazon.com/dp/B0BQGQ1SQK" target="_blank" rel="noopener noreferrer">Ver en Amazon ↗</a></div>
+          </article>
+      </div></div>
+      <div class="parts-group"><h3>Visión y conexión</h3><div class="parts">
+          <article class="card part" id="pieza-rpi">
+            <div class="part-img"><img src="/static/media/partes/raspberry-pi-5.jpg" alt="Raspberry Pi 5 (8 GB)" loading="lazy"></div>
+            <div class="part-body"><span class="qty">1 unidad</span><h4>Raspberry Pi 5 (8 GB)</h4><p>El computador a bordo: corre el mismo programa del modo dron y envía las imágenes al servidor.</p><a href="https://www.amazon.com/dp/B0DNF5JWB4" target="_blank" rel="noopener noreferrer">Ver en Amazon ↗</a></div>
+          </article>
+          <article class="card part" id="pieza-camara">
+            <div class="part-img"><img src="/static/media/partes/camara-module-3.jpg" alt="Cámara Module 3 Wide" loading="lazy"></div>
+            <div class="part-body"><span class="qty">1 unidad</span><h4>Cámara Module 3 Wide</h4><p>Sensor Sony de 12 MP con lente de 120°: abarca más potrero en cada foto.</p><a href="https://www.amazon.com/dp/B0BX7VFT8Q" target="_blank" rel="noopener noreferrer">Ver en Amazon ↗</a></div>
+          </article>
+          <article class="card part" id="pieza-modem">
+            <div class="part-img"><img src="/static/media/partes/modem-4g.jpg" alt="Módem 4G SIM7600G-H" loading="lazy"></div>
+            <div class="part-body"><span class="qty">1 unidad</span><h4>Módem 4G SIM7600G-H</h4><p>Versión de bandas globales (no la NA). Lleva la señal en vivo por la red celular.</p><a href="https://www.amazon.com/dp/B0BD893M5N" target="_blank" rel="noopener noreferrer">Ver en Amazon ↗</a></div>
+          </article>
+          <article class="card part" id="pieza-lidar">
+            <div class="part-img"><img src="/static/media/partes/lidar-tf-luna.jpg" alt="LiDAR Benewake TF-Luna" loading="lazy"></div>
+            <div class="part-body"><span class="qty">1 unidad</span><h4>LiDAR Benewake TF-Luna</h4><p>Mide la distancia real al suelo (hasta 8 m) para despegar, aterrizar y volar bajo con seguridad.</p><a href="https://www.amazon.com/dp/B086MJQSLR" target="_blank" rel="noopener noreferrer">Ver en Amazon ↗</a></div>
+          </article>
+      </div></div>
+      <div class="parts-group"><h3>Estación en tierra</h3><div class="parts">
+          <article class="card part" id="pieza-receptor">
+            <div class="part-img"><img src="/static/media/partes/radio-pocket.jpg" alt="Control RadioMaster Pocket ELRS" loading="lazy"></div>
+            <div class="part-body"><span class="qty">1 unidad + receptor ELRS</span><h4>Control RadioMaster Pocket ELRS</h4><p>El piloto siempre puede tomar el mando manual: despegue, aterrizaje y emergencias.</p><a href="https://www.amazon.com/dp/B0F3D5Z531" target="_blank" rel="noopener noreferrer">Ver en Amazon ↗</a></div>
+          </article>
+          <article class="card part" id="pieza-telemetria">
+            <div class="part-img"><img src="/static/media/partes/telemetria-sik.jpg" alt="Radio de telemetría SiK 915 MHz" loading="lazy"></div>
+            <div class="part-body"><span class="qty">1 par (dron + tierra)</span><h4>Radio de telemetría SiK 915 MHz</h4><p>Enlace directo con el computador en tierra, aunque se caiga el 4G.</p><a href="https://www.amazon.com/dp/B0C499HH5Z" target="_blank" rel="noopener noreferrer">Ver en Amazon ↗</a></div>
+          </article>
+          <article class="card part" id="pieza-cargador">
+            <div class="part-img"><img src="/static/media/partes/cargador-m7ac.jpg" alt="Cargador ToolkitRC M7AC" loading="lazy"></div>
+            <div class="part-body"><span class="qty">2 a 3 unidades</span><h4>Cargador ToolkitRC M7AC</h4><p>Carga baterías 6S de litio-ion o LiPo; con fuente DC llega a 300 W.</p><a href="https://www.amazon.com/dp/B0BKGL1492" target="_blank" rel="noopener noreferrer">Ver en Amazon ↗</a></div>
+          </article>
+      </div></div>
+      <div class="parts-group"><h3>Energía</h3><div class="parts">
+          <article class="card part" id="pieza-bateria">
+            <div class="part-img dark"><img src="/static/media/render/bateria.png?v=2" alt="Batería 6S3P Li-ion 21700" loading="lazy"></div>
+            <div class="part-body"><span class="qty">6 unidades (3 por dron)</span><h4>Batería 6S3P Li-ion 21700</h4><p>18 celdas Molicel o Samsung de alta densidad, ~300 Wh. Más energía por kilo que una LiPo.</p><span class="local">Se compra o arma en Colombia</span></div>
+          </article>
+      </div></div>
+
+      <p class="parts-note">Fotos de producto tomadas de Amazon.com. Antes de comprar hay que confirmar disponibilidad y envío con una dirección en Colombia, porque cambian según el vendedor. Las baterías de litio sueltas normalmente no se despachan por vía internacional, por eso se compran o se arman en Colombia.</p>
+    </div>
+  </section>
+
+  <!-- AUTONOMÍA -->
+  <section class="block" id="autonomia">
+    <div class="wrap">
+      <div class="eyebrow">08 — Autonomía</div>
+      <h2 class="title">Una hora en el aire,<br>y relevos para el resto.</h2>
+      <div class="endur">
+        <div>
+          <p class="section-lead" style="margin:0">Un multirrotor pasa la mayor parte de su energía sosteniéndose en el aire. Para estirar cada vuelo, el diseño junta cuatro decisiones:</p>
+          <ul>
+            <li><i>01</i><span><b>Hélices grandes y motores de bajo KV:</b> mover mucho aire despacio gasta menos que moverlo rápido.</span></li>
+            <li><i>02</i><span><b>Batería de litio-ion 21700:</b> guarda más energía por kilo que una LiPo de dron de carreras.</span></li>
+            <li><i>03</i><span><b>Carga útil liviana:</b> cámara, Raspberry Pi y módem pesan menos de 300 g en total.</span></li>
+            <li><i>04</i><span><b>Vuelo tranquilo:</b> rutas a velocidad constante, sin maniobras bruscas.</span></li>
+          </ul>
+          <p class="honest">Seamos honestos: 45–60 minutos es el objetivo de diseño calculado, no una cifra medida. El viento, el calor y el peso real la bajan, así que se confirma en pruebas de vuelo. Si una finca necesita vuelos de más de una hora seguidos, el camino es un ala fija VTOL (fase 3).</p>
+        </div>
+        <div class="card relay">
+          <h4>Monitoreo continuo con dos drones</h4>
+          <p>Cada vuelo dura ~50 min, seguido de 10 min para cambiar la batería y revisar. Con el segundo dron desfasado media hora, siempre hay uno en el aire.</p>
+          <div class="tl">
+            <span class="tl-label">Dron A</span><div class="tl-track"><span class="fly" style="left:0.00%;width:20.83%"></span><span class="swap" style="left:20.83%;width:4.17%"></span><span class="fly" style="left:25.00%;width:20.83%"></span><span class="swap" style="left:45.83%;width:4.17%"></span><span class="fly" style="left:50.00%;width:20.83%"></span><span class="swap" style="left:70.83%;width:4.17%"></span><span class="fly" style="left:75.00%;width:20.83%"></span><span class="swap" style="left:95.83%;width:4.17%"></span></div>
+            <span class="tl-label">Dron B</span><div class="tl-track"><span class="fly" style="left:12.50%;width:20.83%"></span><span class="swap" style="left:33.33%;width:4.17%"></span><span class="fly" style="left:37.50%;width:20.83%"></span><span class="swap" style="left:58.33%;width:4.17%"></span><span class="fly" style="left:62.50%;width:20.83%"></span><span class="swap" style="left:83.33%;width:4.17%"></span><span class="fly" style="left:87.50%;width:12.50%"></span></div>
+            <span class="tl-label" style="color:var(--green)">Cobertura</span><div class="tl-track"><span class="cover" style="left:0.00%;width:100.00%"></span></div>
+            <div class="tl-axis"><span>0 h</span><span>1 h</span><span>2 h</span><span>3 h</span><span>4 h</span></div>
+          </div>
+          <div class="tl-legend"><span><i style="background:var(--green)"></i>En vuelo</span><span><i style="background:var(--orange)"></i>Cambio de batería y revisión</span></div>
+          <div class="fleet">
+            <div><b>2</b><small>Drones en rotación</small></div>
+            <div><b>6</b><small>Baterías: 1 volando, 1 cargando, 1 lista por dron</small></div>
+            <div><b>~75 min</b><small>Carga de una batería a 300 W</small></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOJA DE RUTA -->
+  <section class="block" id="hoja-de-ruta">
+    <div class="wrap">
+      <div class="eyebrow">09 — Hoja de ruta</div>
+      <h2 class="title">De la demo a la finca.</h2>
+      <div class="road">
+        <article class="card done"><span class="st">● Funcionando</span><h3>Fase 1 · Celulares</h3><p>IA entrenada, servidor, modo dron y centro de monitoreo funcionando en vivo con teléfonos.</p></article>
+        <article class="card next"><span class="st">● Siguiente</span><h3>Fase 2 · Rastreador V1</h3><p>Armar el cuadricóptero, configurar ArduPilot y conectar la Raspberry Pi al mismo servidor.</p></article>
+        <article class="card"><span class="st">○ Después</span><h3>Fase 3 · Más alcance</h3><p>Cámara térmica para ver de noche y ala fija VTOL para fincas grandes y vuelos de más de una hora.</p></article>
+        <article class="card"><span class="st">○ Después</span><h3>Fase 4 · Piloto en finca</h3><p>Registro ante la Aerocivil (RAC 100) y prueba con un ganadero de Córdoba.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta">
+    <div class="wrap">
+      <div class="eyebrow">Demostración en vivo</div>
+      <h2 class="title">Saca tu celular y conviértelo en un dron.</h2>
+      <p class="section-lead">Inicia sesión, activa el modo dron y apunta a una imagen de ganado. Lo verás aparecer en el centro de monitoreo.</p>
+      <button class="btn btn-primary" data-open-login>Iniciar sesión</button>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 DCYM S.A.S · Dron Control y Monitoreo · Montería, Córdoba</span>
+    <span class="mono" style="font-size:12px">Universidad del Sinú · Ingeniería de Sistemas</span>
+  </div>
+</footer>
+
+<script src="/static/js/common.js?v=10"></script>
+<script type="module">
+  // El visor 3D se carga solo cuando la sección se acerca a la pantalla.
+  const el = document.getElementById("visor");
+  const io = new IntersectionObserver(async ([e]) => {
+    if (!e.isIntersecting) return;
+    io.disconnect();
+    const { mountVisor } = await import("/static/js/visor.js?v=13");
+    mountVisor(el);
+  }, { rootMargin: "400px" });
+  io.observe(el);
+</script>
+<script>
+  const header = document.getElementById("header");
+  const pop = document.getElementById("loginPop");
+  const btn = document.getElementById("loginBtn");
+  const form = document.getElementById("loginForm");
+  const err = document.getElementById("loginErr");
+  let logged = false;
+
+  const onScroll = () => header.classList.toggle("scrolled", scrollY > 20);
+  addEventListener("scroll", onScroll, { passive: true }); onScroll();
+
+  function openLogin() {
+    if (logged) { location.href = "/app"; return; }
+    pop.classList.add("open");
+    btn.setAttribute("aria-expanded", "true");
+    setTimeout(() => document.getElementById("user").focus(), 60);
+  }
+  function closeLogin() {
+    pop.classList.remove("open");
+    btn.setAttribute("aria-expanded", "false");
+  }
+  btn.addEventListener("click", e => { e.stopPropagation(); pop.classList.contains("open") ? closeLogin() : openLogin(); });
+  document.querySelectorAll("[data-open-login]").forEach(b => b.addEventListener("click", e => {
+    e.stopPropagation(); scrollTo({ top: 0, behavior: "smooth" }); openLogin();
+  }));
+  document.addEventListener("click", e => { if (!pop.contains(e.target)) closeLogin(); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") closeLogin(); });
+
+  form.addEventListener("submit", async e => {
+    e.preventDefault();
+    err.textContent = "";
+    const sub = document.getElementById("loginSubmit");
+    sub.disabled = true; sub.textContent = "Verificando…";
+    try {
+      const r = await fetch("/api/login", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user: document.getElementById("user").value, password: document.getElementById("pass").value }),
+      });
+      const j = await r.json();
+      if (j.ok) { location.href = "/app"; return; }
+      err.textContent = j.error || "No se pudo iniciar sesión";
+    } catch { err.textContent = "Sin conexión con el servidor"; }
+    sub.disabled = false; sub.textContent = "Entrar";
+  });
+
+  // Si ya hay sesión, el botón de la esquina lleva directo al centro de control.
+  fetch("/api/me").then(r => r.json()).then(j => {
+    if (j.logged) { logged = true; document.getElementById("loginBtnText").textContent = "Centro de control"; }
+    else if (new URLSearchParams(location.search).has("login")) openLogin();
+  }).catch(() => {});
+</script>
+</body>
+</html>

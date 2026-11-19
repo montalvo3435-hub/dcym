@@ -1,0 +1,53 @@
+{
+  "fecha": "2026-10-09 13:06 UTC",
+  "aerea": {
+    "v2": 5,
+    "coco": 1,
+    "v2_conf": [
+      0.651,
+      0.571,
+      0.407,
+      0.378,
+      0.311
+    ],
+    "coco_conf": [
+      0.311
+    ]
+  },
+  "conteo_doble": {
+    "cajas_crudas": 7,
+    "clases": [
+      "standing",
+      "Cattle",
+      "Cattle",
+      "grazing",
+      "standing",
+      "standing",
+      "Cattle"
+    ],
+    "vacas_fusionadas": 3
+  },
+  "v1_detecciones_con_confianza_1pct": {
+    "Wl1QaZW42zqJEZ0Xp8RH_s.jpg": 0,
+    "ePi2sGLl3E41GcExtEMM_s.jpg": 0,
+    "t.jpg": 0,
+    "crop_left.jpg": 0
+  },
+  "dataset_v2": {
+    "imagenes_proyecto": 2237,
+    "clases": {
+      "riding": 42,
+      "smelling": 15,
+      "Cattle-s face": 240,
+      "lying": 57,
+      "grazing": 362,
+      "standing": 1027,
+      "Cattle": 1690,
+      "cattle": 2255
+    },
+    "imagenes_por_version": {
+      "2": 2237,
+      "1": 2198
+    }
+  }
+}

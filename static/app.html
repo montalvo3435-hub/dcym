@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Centro de control — DCYM</title>
+<meta name="theme-color" content="#050a07">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/dcym.css?v=5">
+<style>
+  main { padding: 48px 0 72px; }
+  .hello h1 { font-family: var(--font-display); font-weight: 400; font-size: clamp(42px, 7vw, 64px); line-height: .95; margin: 14px 0 8px; }
+  .hello p { margin: 0; color: var(--muted); font-size: 18px; }
+
+  .modes { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 36px; }
+  .mode {
+    position: relative; overflow: hidden; padding: 28px; min-height: 260px;
+    display: flex; flex-direction: column; justify-content: space-between; gap: 24px;
+    transition: border-color .2s, transform .2s;
+  }
+  .mode:hover { border-color: var(--green); transform: translateY(-2px); }
+  .mode .ico {
+    width: 56px; height: 56px; border-radius: 14px; display: grid; place-items: center;
+    background: var(--green-soft); color: var(--green);
+  }
+  .mode.orange .ico { background: var(--orange-soft); color: var(--orange); }
+  .mode.orange:hover { border-color: var(--orange); }
+  .mode .ico svg { width: 28px; height: 28px; }
+  .mode h2 { margin: 18px 0 6px; font-size: 26px; }
+  .mode p { margin: 0; color: var(--muted); font-size: 16.5px; max-width: 420px; }
+  .mode .go { display: flex; align-items: center; justify-content: space-between; font-weight: 700; color: var(--green); }
+  .mode.orange .go { color: var(--orange); }
+  .mode .go svg { width: 22px; height: 22px; transition: transform .2s; }
+  .mode:hover .go svg { transform: translateX(4px); }
+  .mode .hint { font-family: var(--font-mono); font-size: 11.5px; color: var(--dim); letter-spacing: 1px; text-transform: uppercase; }
+
+  .test { margin-top: 16px; padding: 24px 28px; display: grid; grid-template-columns: 1fr auto; gap: 18px; align-items: center; }
+  .test h3 { margin: 0 0 4px; font-size: 20px; }
+  .test p { margin: 0; color: var(--muted); font-size: 15.5px; }
+  .result { display: none; margin-top: 16px; padding: 16px; }
+  .result.show { display: block; }
+  .result canvas { width: 100%; height: auto; border-radius: 10px; background: #000; display: block; }
+  .result-meta { display: flex; flex-wrap: wrap; gap: 10px 22px; align-items: center; margin-top: 14px; font-size: 15px; }
+  .result-meta b { font-family: var(--font-display); font-weight: 400; font-size: 34px; color: var(--green); line-height: 1; margin-right: 6px; }
+
+  .status { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 22px; }
+
+  @media (max-width: 760px) {
+    .modes { grid-template-columns: 1fr; }
+    .mode { min-height: 0; }
+    .test { grid-template-columns: 1fr; }
+    .user-chip span:last-child { display: none; }
+  }
+</style>
+</head>
+<body>
+<header class="appbar">
+  <div class="wrap">
+    <a href="/" class="brand"><span class="brand-mark" data-brand-icon></span><span class="brand-name">DCYM<small>CENTRO DE CONTROL</small></span></a>
+    <div class="appbar-right">
+      <div class="user-chip"><span class="avatar">EQ</span><span>Equipo DCYM</span></div>
+      <button class="btn btn-ghost btn-sm" onclick="DCYM.logout()">Salir</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="hello">
+    <span class="tag"><span class="dot" id="liveDot"></span><span id="liveText">Conectando…</span></span>
+    <h1>¿Qué quieres hacer?</h1>
+    <p>Usa este dispositivo como dron o abre el centro de monitoreo para ver todos los drones.</p>
+  </div>
+
+  <div class="modes">
+    <a class="card mode" href="/dron">
+      <div>
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div>
+        <h2>Modo dron</h2>
+        <p>Este teléfono se convierte en un dron: abre la cámara trasera y transmite al centro de monitoreo mientras la IA detecta vacas.</p>
+      </div>
+      <div class="go"><span class="hint">Recomendado en celular</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+    </a>
+    <a class="card mode orange" href="/panel">
+      <div>
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></div>
+        <h2>Centro de monitoreo</h2>
+        <p>Mira en tiempo real lo que ve cada dron, cuántas vacas detecta y el conteo total del hato.</p>
+      </div>
+      <div class="go"><span class="hint">Recomendado en computador o pantalla</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+    </a>
+    <a class="card mode" href="/fincas">
+      <span class="tag">MÓDULO DE GESTIÓN</span>
+      <h2>Gestión de fincas</h2>
+      <p>Registra, edita y consulta las fincas y el número de reses que monitorea DCYM.</p>
+    </a>
+  </div>
+
+  <section class="card test">
+    <div>
+      <h3>Probar el modelo con una imagen</h3>
+      <p>Sube una foto de ganado (por ejemplo, una de Google) y mira qué detecta la IA.</p>
+    </div>
+    <label class="btn btn-ghost">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
+      <span id="pickText">Elegir imagen</span>
+      <input type="file" accept="image/*" id="pick" hidden>
+    </label>
+  </section>
+  <section class="card result" id="result">
+    <canvas id="resultCanvas"></canvas>
+    <div class="result-meta">
+      <span><b id="resultCount">0</b><span id="resultLabel">vacas detectadas</span></span>
+      <span class="muted mono" style="font-size:13px" id="resultLatency"></span>
+    </div>
+  </section>
+</main>
+
+<script src="/static/js/common.js?v=5"></script>
+<script>
+  // Estado del sistema (cuántos drones hay en el aire)
+  async function refresh() {
+    try {
+      const j = await (await fetch("/healthz")).json();
+      const n = j.drones;
+      document.getElementById("liveText").textContent = n
+        ? `${n} ${n === 1 ? "dron en el aire" : "drones en el aire"}`
+        : "Sistema en línea · sin drones activos";
+      document.getElementById("liveDot").className = "dot" + (n ? "" : " off");
+    } catch {
+      document.getElementById("liveText").textContent = "Sin conexión";
+      document.getElementById("liveDot").className = "dot warn";
+    }
+  }
+  refresh(); setInterval(refresh, 5000);
+
+  // Prueba con imagen: se reduce a 1024 px en el navegador antes de subirla.
+  const pick = document.getElementById("pick");
+  pick.addEventListener("change", async () => {
+    const file = pick.files[0];
+    if (!file) return;
+    const pickText = document.getElementById("pickText");
+    pickText.textContent = "Analizando…";
+    try {
+      const bmp = await createImageBitmap(file);
+      const scale = Math.min(1, 1024 / Math.max(bmp.width, bmp.height));
+      const w = Math.round(bmp.width * scale), h = Math.round(bmp.height * scale);
+      const c = document.getElementById("resultCanvas");
+      c.width = w; c.height = h;
+      const ctx = c.getContext("2d");
+      ctx.drawImage(bmp, 0, 0, w, h);
+      const dataUrl = c.toDataURL("image/jpeg", 0.85);
+      const r = await fetch("/api/detect", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: dataUrl }),
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || "Error analizando la imagen");
+      document.getElementById("result").classList.add("show");
+      const cw = c.clientWidth || w;
+      DCYM.drawBoxes(ctx, j.predictions, w, h, w, h, 0, 0, cw, w / cw);
+      const n = j.predictions.length;
+      document.getElementById("resultCount").textContent = n;
+      document.getElementById("resultLabel").textContent = n === 1 ? "vaca detectada" : "vacas detectadas";
+      document.getElementById("resultLatency").textContent = `Respuesta del modelo: ${j.latency} ms`;
+      document.getElementById("result").classList.add("show");
+      document.getElementById("result").scrollIntoView({ behavior: "smooth", block: "start" });
+    } catch (e) {
+      DCYM.toast(e.message, true);
+    }
+    pickText.textContent = "Elegir otra imagen";
+    pick.value = "";
+  });
+</script>
+</body>
+</html>

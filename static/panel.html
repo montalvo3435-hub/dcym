@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Centro de monitoreo — DCYM</title>
+<meta name="theme-color" content="#050a07">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/dcym.css?v=5">
+<style>
+  .appbar .wrap, main.wrap { width: min(1440px, 100% - 32px); }
+  main { padding: 24px 0 48px; }
+
+  .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .kpi { padding: 18px 20px; }
+  .kpi small { display: block; font-size: 13px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--muted); }
+  .kpi b { display: block; font-family: var(--font-display); font-weight: 400; font-size: 52px; line-height: 1; margin-top: 6px; font-variant-numeric: tabular-nums; }
+  .kpi.hl b { color: var(--green); }
+  .kpi.or b { color: var(--orange); }
+
+  .layout { display: grid; grid-template-columns: 1fr 340px; gap: 16px; margin-top: 16px; align-items: start; }
+  .section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 4px 2px 12px; }
+  .section-head h2 { margin: 0; font-size: 18px; letter-spacing: .4px; }
+
+  /* ---------- drones ---------- */
+  .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+  .tiles[data-n="1"] { grid-template-columns: minmax(0, 760px); }
+  .tiles[data-n="2"], .tiles[data-n="4"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tiles[data-n="3"], .tiles[data-n="5"], .tiles[data-n="6"] { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .tile { overflow: hidden; display: flex; flex-direction: column; transition: border-color .2s; }
+  .tile.has-cows { border-color: rgba(0,230,126,.55); }
+  .tile.stale { opacity: .6; }
+  .tile.big { grid-column: 1 / -1; }
+  .tile-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; }
+  .tile-name { display: flex; align-items: center; gap: 9px; font-weight: 700; font-size: 17px; min-width: 0; }
+  .tile-name span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tile-lat { font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+  .tile-view { position: relative; background: #000; aspect-ratio: 16 / 9; cursor: zoom-in; }
+  .tile.big .tile-view { cursor: zoom-out; }
+  .tile-view canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+  .tile-view .rec { position: absolute; top: 10px; left: 10px; display: flex; gap: 6px; align-items: center; font-family: var(--font-mono); font-size: 11px; letter-spacing: 1.5px; color: #fff; background: rgba(0,0,0,.55); padding: 4px 8px; border-radius: 6px; }
+  .tile-view .rec i { width: 7px; height: 7px; border-radius: 50%; background: var(--red); animation: blink 1.2s infinite; }
+  @keyframes blink { 50% { opacity: .2; } }
+  .tile-view .wait { position: absolute; inset: 0; display: grid; place-items: center; color: var(--dim); font-family: var(--font-mono); font-size: 12px; letter-spacing: 1.5px; }
+  .tile-foot { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 12px 14px; border-top: 1px solid var(--line); }
+  .tile-foot b { font-family: var(--font-display); font-weight: 400; font-size: 34px; line-height: 1; margin-right: 6px; }
+  .tile.has-cows .tile-foot b { color: var(--green); }
+  .tile-foot .since { font-size: 13px; color: var(--dim); }
+
+  .empty { padding: 48px 28px; text-align: center; border-style: dashed; }
+  .empty .ico { width: 64px; height: 64px; border-radius: 18px; margin: 0 auto 18px; display: grid; place-items: center; background: var(--green-soft); color: var(--green); }
+  .empty .ico svg { width: 32px; height: 32px; }
+  .empty h3 { margin: 0 0 6px; font-size: 22px; }
+  .empty p { margin: 0 auto; color: var(--muted); max-width: 440px; }
+
+  /* ---------- lateral ---------- */
+  .side { display: grid; gap: 12px; position: sticky; top: 80px; }
+  .side .card { padding: 18px; }
+  .side h3 { margin: 0 0 12px; font-size: 13px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--muted); }
+  .join { display: grid; grid-template-columns: 112px 1fr; gap: 14px; align-items: center; }
+  .qr { width: 112px; height: 112px; background: #fff; border-radius: 10px; padding: 7px; }
+  .qr img, .qr canvas { width: 100% !important; height: 100% !important; }
+  .join p { margin: 0; font-size: 14.5px; color: var(--muted); }
+  .join .url { display: block; margin-top: 6px; font-family: var(--font-mono); font-size: 12px; color: var(--text); word-break: break-all; }
+
+  .conf-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+  .conf-row b { font-family: var(--font-mono); font-size: 15px; color: var(--green); }
+  input[type=range] { width: 100%; accent-color: var(--green); }
+  select.input { appearance: none; -webkit-appearance: none; padding-right: 36px; cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238aab96' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 12px center; }
+  .conf-help { margin: 8px 0 0; font-size: 13px; color: var(--dim); }
+
+  .log { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; max-height: 360px; overflow-y: auto; }
+  .log li { display: grid; grid-template-columns: 8px 1fr; gap: 10px; padding: 8px 4px; border-bottom: 1px solid var(--line); font-size: 14.5px; animation: slide .3s ease-out; }
+  .log li:last-child { border-bottom: 0; }
+  .log li i { width: 8px; height: 8px; border-radius: 50%; margin-top: 7px; background: var(--dim); }
+  .log li.cow i { background: var(--green); }
+  .log li.join i { background: #4da3ff; }
+  .log li.lost i, .log li.leave i { background: var(--orange); }
+  .log li.test i { background: #c58cff; }
+  .log time { display: block; font-family: var(--font-mono); font-size: 11px; color: var(--dim); }
+  .log .none { color: var(--dim); display: block; padding: 6px 4px; font-size: 14px; }
+  @keyframes slide { from { opacity: 0; transform: translateY(-4px); } }
+
+  @media (max-width: 1080px) {
+    .layout { grid-template-columns: 1fr; }
+    .side { position: static; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+  }
+  @media (max-width: 640px) {
+    .tiles[data-n] { grid-template-columns: 1fr; }
+    .kpis { grid-template-columns: 1fr 1fr; }
+    .kpi b { font-size: 40px; }
+    .tiles { grid-template-columns: 1fr; }
+    .appbar .hide-sm { display: none; }
+  }
+</style>
+</head>
+<body>
+<header class="appbar">
+  <div class="wrap">
+    <a href="/app" class="brand"><span class="brand-mark" data-brand-icon></span><span class="brand-name">DCYM<small>CENTRO DE MONITOREO</small></span></a>
+    <div class="appbar-right">
+      <span class="tag hide-sm" id="conn"><span class="dot warn" id="connDot"></span><span id="connText">Conectando</span></span>
+      <a href="/app" class="btn btn-ghost btn-sm">Volver</a>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="kpis">
+    <div class="card kpi"><small>Drones en el aire</small><b id="kDrones">0</b></div>
+    <div class="card kpi hl"><small>Vacas a la vista</small><b id="kCows">0</b></div>
+    <div class="card kpi"><small>Frames analizados</small><b id="kFrames">0</b></div>
+    <div class="card kpi or"><small>Máximo simultáneo</small><b id="kMax">0</b></div>
+  </section>
+
+  <div class="layout">
+    <section>
+      <div class="section-head">
+        <h2>Cámaras en vivo</h2>
+        <span class="muted mono" style="font-size:12px">Toca una cámara para ampliarla</span>
+      </div>
+      <div class="tiles" id="tiles"></div>
+      <div class="card empty" id="empty">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="5" r="2.5"/><circle cx="19" cy="5" r="2.5"/><circle cx="5" cy="19" r="2.5"/><circle cx="19" cy="19" r="2.5"/><path d="M7 7l3 3M17 7l-3 3M7 17l3-3M17 17l-3-3"/><rect x="9.5" y="9.5" width="5" height="5" rx="1.2"/></svg></div>
+        <h3>Ningún dron en el aire</h3>
+        <p>Escanea el código QR con un celular, inicia sesión y activa el <b>modo dron</b>. Su cámara aparecerá aquí automáticamente.</p>
+      </div>
+    </section>
+
+    <aside class="side">
+      <div class="card">
+        <h3>Únete como dron</h3>
+        <div class="join">
+          <div class="qr" id="qr"></div>
+          <p>Escanea con la cámara del celular para entrar.<span class="url" id="joinUrl"></span></p>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Inteligencia artificial</h3>
+        <div class="field" style="margin-bottom:16px">
+          <label for="model">Modelo de detección</label>
+          <select class="input" id="model"></select>
+        </div>
+        <div class="conf-row"><span>Confianza mínima</span><b id="confVal">40%</b></div>
+        <input type="range" min="10" max="90" step="5" value="40" id="conf" aria-label="Confianza mínima">
+        <p class="conf-help">Más bajo detecta más (con riesgo de falsos positivos). Más alto es más estricto.</p>
+      </div>
+      <div class="card">
+        <h3>Actividad</h3>
+        <ul class="log" id="log"><li class="none" style="display:block;border:0"><span class="none">Sin actividad todavía</span></li></ul>
+      </div>
+    </aside>
+  </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="/static/js/common.js?v=5"></script>
+<script>
+  const $ = id => document.getElementById(id);
+  const tiles = new Map();  // id -> { el, canvas, ctx, last }
+  let ws, retry = 0, lastMsg = Date.now();
+  const layout = () => { $("tiles").dataset.n = tiles.size; };
+
+  // QR para que el público se una desde su celular
+  const joinUrl = `${location.origin}/?login=1`;
+  $("joinUrl").textContent = location.host;
+  try { new QRCode($("qr"), { text: joinUrl, width: 196, height: 196, colorDark: "#050a07", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.M }); }
+  catch { $("qr").textContent = ""; }
+
+  function setConn(text, kind) { $("connText").textContent = text; $("connDot").className = "dot" + (kind ? " " + kind : ""); }
+
+  function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+
+  function ensureTile(d) {
+    if (tiles.has(d.id)) return tiles.get(d.id);
+    const el = document.createElement("article");
+    el.className = "card tile";
+    el.innerHTML = `
+      <div class="tile-head">
+        <div class="tile-name"><span class="dot"></span><span>${esc(d.name)}</span></div>
+        <span class="tile-lat">—</span>
+      </div>
+      <div class="tile-view">
+        <canvas></canvas>
+        <div class="wait">ESPERANDO IMAGEN…</div>
+        <div class="rec"><i></i>EN VIVO</div>
+      </div>
+      <div class="tile-foot">
+        <span><b>0</b><span class="lbl">vacas</span></span>
+        <span class="since"></span>
+      </div>`;
+    el.querySelector(".tile-view").addEventListener("click", () => el.classList.toggle("big"));
+    $("tiles").appendChild(el);
+    const canvas = el.querySelector("canvas");
+    const t = { el, canvas, ctx: canvas.getContext("2d"), last: Date.now(), since: d.since, img: new Image(), busy: false };
+    tiles.set(d.id, t);
+    $("empty").style.display = "none";
+    layout();
+    return t;
+  }
+
+  function removeTile(id) {
+    const t = tiles.get(id);
+    if (t) { t.el.remove(); tiles.delete(id); }
+    if (!tiles.size) $("empty").style.display = "";
+    layout();
+  }
+
+  function renderFrame(t, f) {
+    // si la imagen anterior aún se decodifica, se salta esta (máx. 3 s, por si se atasca)
+    if (t.busy && Date.now() - t.busyAt < 3000) return;
+    t.busy = true; t.busyAt = Date.now();
+    const img = new Image();
+    img.onload = () => {
+      t.busy = false;
+      const w = f.w || img.width, h = f.h || img.height;
+      if (t.canvas.width !== w || t.canvas.height !== h) { t.canvas.width = w; t.canvas.height = h; }
+      t.ctx.drawImage(img, 0, 0, w, h);
+      const cw = t.canvas.clientWidth || w;
+      DCYM.drawBoxes(t.ctx, f.predictions || [], w, h, w, h, 0, 0, cw, w / cw);
+      t.el.querySelector(".wait").style.display = "none";
+    };
+    img.onerror = () => { t.busy = false; };
+    img.src = "data:image/jpeg;base64," + f.image;
+  }
+
+  function updateTileMeta(t, count, latency) {
+    t.last = Date.now();
+    t.el.classList.toggle("has-cows", count > 0);
+    if (t.el.classList.contains("stale")) {
+      t.el.classList.remove("stale");
+      t.el.querySelector(".rec").innerHTML = "<i></i>EN VIVO";
+    }
+    t.el.querySelector(".tile-foot b").textContent = count;
+    t.el.querySelector(".tile-foot .lbl").textContent = DCYM.plural(count);
+    if (latency != null) t.el.querySelector(".tile-lat").textContent = `IA ${latency} ms`;
+  }
+
+  function addLog(ev, prepend = true) {
+    const log = $("log");
+    log.querySelector(".none")?.closest("li")?.remove();
+    const li = document.createElement("li");
+    li.className = ev.kind;
+    li.innerHTML = `<i></i><div>${esc(ev.text)}<time>${DCYM.clock(ev.t)}</time></div>`;
+    prepend ? log.prepend(li) : log.append(li);
+    while (log.children.length > 40) log.lastChild.remove();
+  }
+
+  function connect() {
+    ws = new WebSocket(DCYM.wsUrl("/ws/panel"));
+    setConn("Conectando", "warn");
+    ws.onopen = () => { retry = 0; lastMsg = Date.now(); setConn("En línea"); };
+    ws.onmessage = ev => {
+      lastMsg = Date.now();
+      const m = JSON.parse(ev.data);
+      switch (m.type) {
+        case "snapshot":
+          [...tiles.keys()].forEach(removeTile);
+          $("log").innerHTML = "";
+          if (!m.events.length) $("log").innerHTML = `<li style="display:block;border:0"><span class="none">Sin actividad todavía</span></li>`;
+          m.events.forEach(e => addLog(e, false));
+          $("model").innerHTML = m.models.map(x => `<option value="${esc(x.id)}">${esc(x.name)}</option>`).join("");
+          m.drones.forEach(d => {
+            const t = ensureTile(d);
+            if (d.frame) { renderFrame(t, d.frame); updateTileMeta(t, d.count, d.latency); }
+          });
+          break;
+        case "join": ensureTile(m.drone); break;
+        case "leave": removeTile(m.id); break;
+        case "frame": {
+          const t = ensureTile({ id: m.id, name: m.name, since: Date.now() / 1000 });
+          renderFrame(t, m);
+          updateTileMeta(t, m.count, m.latency);
+          break;
+        }
+        case "event": addLog(m.event); break;
+        case "stats":
+          $("kDrones").textContent = m.drones;
+          $("kCows").textContent = m.cows_now;
+          $("kFrames").textContent = m.frames.toLocaleString("es-CO");
+          $("kMax").textContent = m.max_cows;
+          if (document.activeElement !== $("conf")) { $("conf").value = m.confidence; }
+          $("confVal").textContent = m.confidence + "%";
+          if (document.activeElement !== $("model")) $("model").value = m.model;
+          break;
+      }
+    };
+    ws.onclose = ev => {
+      if (ev.code === 4401) { location.href = "/?login=1"; return; }
+      setConn("Reconectando", "warn");
+      setTimeout(connect, Math.min(8000, 800 * 2 ** retry++));
+    };
+  }
+  connect();
+
+  // El servidor manda un latido cada 2 s. Si pasan 7 s sin nada, la conexión
+  // quedó colgada (red del salón, proxy…): se cierra y se reconecta sola.
+  function forceReconnect() {
+    const old = ws;
+    old.onclose = old.onmessage = null;
+    try { old.close(); } catch {}
+    setConn("Reconectando", "warn");
+    connect();
+  }
+  setInterval(() => {
+    if (ws && ws.readyState === 1 && Date.now() - lastMsg > 7000) forceReconnect();
+  }, 1000);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && ws && ws.readyState === 1 && Date.now() - lastMsg > 3000) forceReconnect();
+  });
+
+  $("model").addEventListener("change", e => {
+    if (ws?.readyState === 1) ws.send(JSON.stringify({ type: "model", value: e.target.value }));
+    e.target.blur();
+  });
+  $("conf").addEventListener("input", e => { $("confVal").textContent = e.target.value + "%"; });
+  $("conf").addEventListener("change", e => {
+    if (ws?.readyState === 1) ws.send(JSON.stringify({ type: "confidence", value: +e.target.value }));
+  });
+
+  // Marca como "sin señal" las cámaras que dejaron de mandar imágenes.
+  setInterval(() => {
+    for (const t of tiles.values()) {
+      const stale = Date.now() - t.last > 5000;
+      if (stale !== t.el.classList.contains("stale")) {
+        t.el.classList.toggle("stale", stale);
+        t.el.querySelector(".rec").innerHTML = stale ? "SIN SEÑAL" : "<i></i>EN VIVO";
+      }
+      t.el.querySelector(".since").textContent = t.since ? `En el aire ${DCYM.timeAgo(t.since).replace("hace ", "")}` : "";
+    }
+  }, 1000);
+</script>
+</body>
+</html>

@@ -1,0 +1,81 @@
+{
+  "fecha": "2026-10-09 13:08 UTC",
+  "duracion_s": 45,
+  "telefonos_simulados": 4,
+  "analisis_ia_por_telefono": {
+    "1": 128,
+    "2": 128,
+    "3": 128,
+    "4": 128
+  },
+  "analisis_totales": 512,
+  "errores": 0,
+  "latencia_ia_ms": {
+    "mediana": 57,
+    "p95": 75,
+    "max": 592
+  },
+  "panel_normal_frames_cada_5s": {
+    "0-5s": {
+      "Prueba 1": 14,
+      "Prueba 2": 14,
+      "Prueba 3": 14,
+      "Prueba 4": 14
+    },
+    "5-10s": {
+      "Prueba 1": 14,
+      "Prueba 2": 14,
+      "Prueba 3": 14,
+      "Prueba 4": 14
+    },
+    "10-15s": {
+      "Prueba 1": 14,
+      "Prueba 2": 14,
+      "Prueba 3": 14,
+      "Prueba 4": 14
+    },
+    "15-20s": {
+      "Prueba 1": 15,
+      "Prueba 2": 14,
+      "Prueba 3": 15,
+      "Prueba 4": 15
+    },
+    "20-25s": {
+      "Prueba 1": 14,
+      "Prueba 2": 15,
+      "Prueba 3": 14,
+      "Prueba 4": 14
+    },
+    "25-30s": {
+      "Prueba 1": 14,
+      "Prueba 2": 14,
+      "Prueba 3": 14,
+      "Prueba 4": 14
+    },
+    "30-35s": {
+      "Prueba 1": 14,
+      "Prueba 2": 14,
+      "Prueba 3": 14,
+      "Prueba 4": 14
+    },
+    "35-40s": {
+      "Prueba 1": 15,
+      "Prueba 2": 14,
+      "Prueba 3": 15,
+      "Prueba 4": 15
+    },
+    "40-45s": {
+      "Prueba 1": 13,
+      "Prueba 2": 14,
+      "Prueba 3": 13,
+      "Prueba 4": 13
+    },
+    "45-50s": {
+      "Prueba 1": 1,
+      "Prueba 2": 1,
+      "Prueba 3": 1,
+      "Prueba 4": 1
+    }
+  },
+  "panel_lento_sigue_conectado": true
+}
